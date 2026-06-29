@@ -1,0 +1,7 @@
+* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #aee9ff;
+  font-family: "PingFang SC", "Microsoft YaHei", "Comic Sans MS", sans-serif;
+  touch-action: none; overscroll-behavior: none; }
+#game { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; }
+#loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+  font-size: 5vmin; font-weight: bold; color: #2e7d32; background: #d6f7e6; z-index: 100; }
