@@ -1,0 +1,13 @@
+本目录中的垃圾图标（t_*.png）来自 OpenMoji —— 开源表情与图标项目。
+Trash icons (t_*.png) in this folder are from OpenMoji – the open-source emoji and icon project.
+
+许可 / License: CC BY-SA 4.0  (https://creativecommons.org/licenses/by-sa/4.0/)
+项目主页 / Project: https://openmoji.org/
+
+使用的图标（key = OpenMoji 码点）：
+t_bottle=1F9F4  t_bag=1F6CD  t_cup=1F964  t_can=1F96B  t_tin=1FAD9
+t_glass=1F37E   t_news=1F4F0 t_box=1F4E6  t_driftwood=1FAB5  t_plank=1FAB5
+t_tire=1F6DE    t_banana=1F34C t_apple=1F34E t_fishbone=1F9B4 t_battery=1F50B
+t_bulb=1F4A1    t_foam=1F9FD t_boot=1F97E
+
+其余美术（鱼/水母/海洋环境/可造物品/访客/材料/UI）为本项目程序化绘制。

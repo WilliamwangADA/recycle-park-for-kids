@@ -14,7 +14,8 @@
 
 ## 技术
 - 纯前端，单页 Canvas，无需安装。
-- 美术：程序化绘制（`js/sprites.js`），可无缝替换为 AI 生成的 PNG —— 把 `assets/sprites/<key>.png` 放进去即可自动优先使用。
+- 美术：垃圾图标用 [OpenMoji](https://openmoji.org/)（CC BY-SA 4.0，清晰易识别）；鱼/水母/海洋环境/物品/访客为程序化绘制（`js/sprites.js` + `js/marine.js` 动画引擎）。放 `assets/sprites/<key>.png` 即可覆盖任意贴图。
+- 素材署名见 `assets/sprites/ATTRIBUTION.txt`。
 - 语音：`edge-tts` 预生成 MP3（温暖女声 Xiaoxiao）。改台词后跑 `python3 gen_voice.py` 重新生成。
 
 ## 文件结构

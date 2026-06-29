@@ -89,7 +89,7 @@
     const pool = ocean.lv.trash, top = waterTop() + 20, bot = sandTop() - 20;
     for (let i = 0; i < count; i++) {
       ocean.items.push({ id: pick(pool), x: 50 + Math.random() * (G.W - 100), y: top + Math.random() * (bot - top),
-        vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 10, ph: Math.random() * 6.28, s: G.H * 0.078, ang: (Math.random() - .5) * 0.5, va: (Math.random() - .5) * 0.3 });
+        vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 10, ph: Math.random() * 6.28, s: G.H * 0.115, ang: (Math.random() - .5) * 0.35, va: (Math.random() - .5) * 0.2 });
     }
   }
   function newFish() {
@@ -210,11 +210,18 @@
     });
     // 气泡（带高光）
     ocean.bubbles.forEach(b => { const a = 0.35 * (1 - b.age / 3); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fillStyle = 'rgba(220,245,255,' + a + ')'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,' + (a + 0.15) + ')'; ctx.stroke(); ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.3, 0, 7); ctx.fillStyle = 'rgba(255,255,255,' + (a + 0.25) + ')'; ctx.fill(); });
-    // 垃圾（拖拽放大 + 光晕）
+    // 垃圾（白色光晕托底，让图标在水里清晰跳出 + 拖拽放大发光）
     ocean.items.forEach(it => {
       const drag = ocean.drag && ocean.drag.it === it;
-      if (drag) { ctx.save(); ctx.shadowColor = 'rgba(255,255,180,.9)'; ctx.shadowBlur = 22; }
-      Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, it.y + (drag ? 0 : Math.sin(it.ph) * 4), it.s * (drag ? 1.2 : 1), { rot: drag ? Math.sin(t * 8) * 0.08 : it.ang });
+      const iy = it.y + (drag ? 0 : Math.sin(it.ph) * 4), sz = it.s * (drag ? 1.2 : 1);
+      // 柔光晕
+      const hg = ctx.createRadialGradient(it.x + sh, iy, 0, it.x + sh, iy, sz * 0.62);
+      hg.addColorStop(0, 'rgba(255,255,255,.5)'); hg.addColorStop(0.6, 'rgba(255,255,255,.18)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(it.x + sh, iy, sz * 0.62, 0, 7); ctx.fill();
+      // 落影
+      ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = '#012238'; ctx.beginPath(); ctx.ellipse(it.x + sh, iy + sz * 0.42, sz * 0.32, sz * 0.12, 0, 0, 7); ctx.fill(); ctx.restore();
+      if (drag) { ctx.save(); ctx.shadowColor = 'rgba(255,245,150,.95)'; ctx.shadowBlur = 26; }
+      Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, iy, sz, { rot: drag ? Math.sin(t * 8) * 0.06 : it.ang });
       if (drag) ctx.restore();
     });
     // 拖拽：抄网
@@ -248,14 +255,13 @@
     // 控制行：返回 / 刷新 / 建造
     const by = top + 6, bh = Math.max(40, G.H * 0.066);
     const back = { x: 10, y: by, w: bh * 1.4, h: bh, label: '◀', color: '#ff7675', fs: Math.round(bh * 0.5), onTap: () => Eng.go('menu') };
+    const mute = { x: 10 + bh * 1.4 + 8, y: by, w: bh * 1.4, h: bh, label: Audio2.isMuted() ? '🔇' : '🔊', color: '#74b9ff', fs: Math.round(bh * 0.42), onTap: () => { Audio2.setMuted(!Audio2.isMuted()); mute.label = Audio2.isMuted() ? '🔇' : '🔊'; } };
     const refresh = { x: G.W - 10 - (bh * 4.6) - 8 - bh * 3.2, y: by, w: bh * 3.2, h: bh, label: '🔄 刷新海域', color: '#48a0d8', fs: Math.round(bh * 0.34), onTap: () => { spawnTrash(16); Audio2.sfx('splash'); Eng.floatText(G.W / 2, G.H * 0.3, '又漂来好多垃圾!', '#fff'); } };
     const build = { x: G.W - 10 - bh * 4.6, y: by, w: bh * 4.6, h: bh, label: '🔨 建造乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.openCraft() };
-    ocean.buttons.push(back, refresh, build); btn(ctx, back); btn(ctx, refresh); btn(ctx, build);
+    ocean.buttons.push(back, mute, refresh, build); btn(ctx, back); btn(ctx, mute); btn(ctx, refresh); btn(ctx, build);
 
     // 剩余提示
     if (ocean.items.length === 0) { ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(G.H * 0.04) + 'px "PingFang SC",sans-serif'; ctx.fillText('海里干净啦! 点「刷新海域」再清理，或去「建造乐园」', G.W / 2, (waterTop() + sandTop()) / 2); }
-
-    muteBtn(ocean, ctx, true);
   };
 
   /* ---------- 小工具 ---------- */
