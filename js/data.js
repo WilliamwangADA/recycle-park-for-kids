@@ -83,14 +83,20 @@ window.DATA = (function () {
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */
   const LEVELS = [
-    { id: 'ocean',  name: '大海', theme: 'ocean', unlocked: true, tool: 'net',
+    { id: 'ocean',  name: '大海', theme: 'ocean', icon: '🌊', unlocked: true, tool: 'net',
       trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot'] },
-    { id: 'park',   name: '公园', theme: 'park',  unlocked: false, tool: 'tongs', trash: [] },
-    { id: 'town',   name: '小区', theme: 'town',  unlocked: false, tool: 'broom', trash: [] },
-    { id: 'school', name: '学校', theme: 'school',unlocked: false, tool: 'tongs', trash: [] },
-    { id: 'forest', name: '森林', theme: 'forest',unlocked: false, tool: 'tongs', trash: [] },
-    { id: 'mount',  name: '大山', theme: 'mount', unlocked: false, tool: 'broom', trash: [] },
-    { id: 'city',   name: '城市', theme: 'city',  unlocked: false, tool: 'broom', trash: [] },
+    { id: 'park',   name: '公园', theme: 'park',  icon: '🌳', unlocked: true, tool: 'tongs',
+      trash: ['bottle','bag','cup','can','news','banana','apple','foam'] },
+    { id: 'town',   name: '小区', theme: 'town',  icon: '🏘️', unlocked: true, tool: 'broom',
+      trash: ['box','bottle','can','battery','apple','foam','news','bag'] },
+    { id: 'school', name: '学校', theme: 'school',icon: '🏫', unlocked: true, tool: 'tongs',
+      trash: ['news','cup','glass','apple','bulb','box','bottle','banana'] },
+    { id: 'forest', name: '森林', theme: 'forest',icon: '🌲', unlocked: true, tool: 'tongs',
+      trash: ['bottle','bag','can','banana','apple','foam','box','glass'] },
+    { id: 'mount',  name: '大山', theme: 'mount', icon: '⛰️', unlocked: true, tool: 'broom',
+      trash: ['glass','tin','box','apple','battery','bottle','can','foam'] },
+    { id: 'city',   name: '城市', theme: 'city',  icon: '🏙️', unlocked: true, tool: 'broom',
+      trash: ['bottle','can','box','foam','bulb','battery','cup','bag','news'] },
   ];
 
   /* ---- 乐园访客（人气达标解锁）---- */

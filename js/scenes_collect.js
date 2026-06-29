@@ -42,14 +42,14 @@
       const x = sx + i * (iw + gap);
       rr(ctx, x, sy, iw, ih, 12); ctx.fillStyle = lv.unlocked ? '#fff' : 'rgba(255,255,255,.5)'; ctx.fill();
       ctx.lineWidth = 3; ctx.strokeStyle = lv.unlocked ? '#2e86de' : '#b2bec3'; ctx.stroke();
-      ctx.fillStyle = lv.unlocked ? '#2d3436' : '#9aa'; ctx.font = 'bold ' + Math.round(iw * 0.26) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(lv.unlocked ? '🌊' : '🔒', x + iw / 2, sy + ih * 0.4);
+      ctx.fillStyle = lv.unlocked ? '#2d3436' : '#9aa'; ctx.font = 'bold ' + Math.round(iw * 0.3) + 'px "PingFang SC",sans-serif';
+      ctx.fillText(lv.unlocked ? lv.icon : '🔒', x + iw / 2, sy + ih * 0.4);
       ctx.font = 'bold ' + Math.round(iw * 0.2) + 'px "PingFang SC",sans-serif';
       ctx.fillText(lv.name, x + iw / 2, sy + ih * 0.78);
       if (lv.unlocked) menu.buttons.push({ x, y: sy, w: iw, h: ih, onTap: () => Eng.go('ocean', lv) });
     });
-    ctx.font = 'bold ' + Math.round(G.H * 0.024) + 'px "PingFang SC",sans-serif'; ctx.fillStyle = '#7f8c8d';
-    ctx.fillText('更多地方马上就来啦～', G.W / 2, sy + ih + G.H * 0.03);
+    ctx.font = 'bold ' + Math.round(G.H * 0.024) + 'px "PingFang SC",sans-serif'; ctx.fillStyle = '#3a7d3a';
+    ctx.fillText('点一个地方去清理吧～', G.W / 2, sy + ih + G.H * 0.03);
 
     const fbw = Math.min(G.W * 0.42, 280), fbh = G.H * 0.1, fy = G.H * 0.84;
     const c = { x: G.W / 2 - fbw - 8, y: fy, w: fbw, h: fbh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(fbh * 0.32), onTap: () => Eng.openCraft() };
@@ -67,19 +67,36 @@
     { body: ['#7fc7ff', '#3d8fe0'], fin: '#2f7fd0' },
     { body: ['#ff8a8a', '#e85b5b'], fin: '#d94b4b' },
   ];
+  /* 各关卡主题（ocean 走水下渲染；其余走陆地渲染）*/
+  const THEMES = {
+    ocean:  { water: true },
+    park:   { sky: ['#bfe8ff', '#e3f8df'], ground: ['#a6e36a', '#7cc24a'], decor: ['i_tree', 'd_bush', 'i_flowers', 'i_bench', 'i_tree', 'd_bush'], critters: ['c_butterfly', 'v_bird', 'c_squirrel'], particle: 'leaf' },
+    town:   { sky: ['#cfe9ff', '#eef3f8'], ground: ['#c2cdd8', '#9aa7b5'], decor: ['d_house', 'i_lamp', 'i_mailbox', 'd_building', 'd_house'], critters: ['c_dove', 'v_cat'], particle: 'dust' },
+    school: { sky: ['#d7ecff', '#fdf3da'], ground: ['#cdd6a8', '#aebf80'], decor: ['i_tree', 'd_school', 'i_bench', 'i_flowers', 'i_tree'], critters: ['c_dove', 'c_butterfly'], particle: 'leaf' },
+    forest: { sky: ['#bfe6d6', '#dff3df'], ground: ['#7fbf57', '#5a9a3c'], decor: ['d_pine', 'i_tree', 'd_mushroom', 'd_pine', 'd_bush', 'd_pine'], critters: ['c_deer', 'v_bunny', 'c_butterfly'], particle: 'leaf' },
+    mount:  { sky: ['#cfe6f5', '#eaf3fb'], ground: ['#b7b0a0', '#8d8474'], decor: ['d_mountain', 'd_pine', 'd_rock', 'd_pine', 'd_mountain'], critters: ['c_goat', 'c_dove'], particle: 'snow' },
+    city:   { sky: ['#cfe2f2', '#e6edf3'], ground: ['#b0b8c2', '#878f99'], decor: ['d_building', 'd_building', 'i_lamp', 'd_house', 'd_building'], critters: ['c_dove'], particle: 'dust' },
+  };
+
   ocean.enter = function (lv) {
     ocean.lv = lv || DATA.LEVELS[0];
-    Marine.init(G.W, G.H);
-    seabed();             // 海床装饰（固定）
+    ocean.theme = ocean.lv.theme; ocean.cfg = THEMES[ocean.theme] || THEMES.park; ocean.water = !!ocean.cfg.water;
+    if (ocean.water) Marine.init(G.W, G.H);
+    setupDecor();
     spawnTrash(16);
-    ocean.fish = []; for (let i = 0; i < 7; i++) ocean.fish.push(newFish());
-    ocean.jellies = []; for (let i = 0; i < 2; i++) ocean.jellies.push({ x: Math.random() * G.W, y: waterTop() + 40 + Math.random() * 120, s: G.H * (0.07 + Math.random() * 0.03), vx: (Math.random() - .5) * 8, vy: -4 - Math.random() * 4, ph: Math.random() * 6.28 });
-    ocean.plankton = []; for (let i = 0; i < 46; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.8, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
+    ocean.fish = []; ocean.jellies = []; ocean.plankton = []; ocean.critters = []; ocean.parts = [];
+    if (ocean.water) {
+      for (let i = 0; i < 7; i++) ocean.fish.push(newFish());
+      for (let i = 0; i < 2; i++) ocean.jellies.push({ x: Math.random() * G.W, y: waterTop() + 40 + Math.random() * 120, s: G.H * (0.07 + Math.random() * 0.03), vx: (Math.random() - .5) * 8, vy: -4 - Math.random() * 4, ph: Math.random() * 6.28 });
+      for (let i = 0; i < 46; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.8, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
+    } else {
+      for (let i = 0; i < 6; i++) ocean.critters.push(newCritter());
+    }
     ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
     ocean.tool = ocean.lv.tool || 'net'; ocean.scoopT = 0; ocean.droplets = []; ocean.combo = 0; ocean.comboT = 0;
-    Audio2.sfx('splash'); Audio2.voice('ocean_intro');
+    Audio2.sfx('splash'); Audio2.voice(ocean.water ? 'ocean_intro' : 'land_intro');
   };
-  ocean.resize = function () { Marine.init(G.W, G.H); seabed(); };
+  ocean.resize = function () { if (ocean.water) Marine.init(G.W, G.H); setupDecor(); };
   function waterTop() { return Math.max(44, G.H * 0.072) + 10 + Math.max(40, G.H * 0.066) + 12; } // 计分牌 + 控制行
   function binH() { return G.H * 0.135; }
   function binsTop() { return G.H - binH() - 8; }
@@ -87,7 +104,7 @@
 
   function spawnTrash(count) {
     ocean.items = [];
-    const pool = ocean.lv.trash, top = waterTop() + 20, bot = sandTop() - 20;
+    const pool = ocean.lv.trash, top = waterTop() + 20, bot = sandTop() - 16;
     for (let i = 0; i < count; i++) {
       ocean.items.push({ id: pick(pool), x: 50 + Math.random() * (G.W - 100), y: top + Math.random() * (bot - top),
         vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 10, ph: Math.random() * 6.28, s: G.H * 0.115, ang: (Math.random() - .5) * 0.35, va: (Math.random() - .5) * 0.2 });
@@ -98,16 +115,67 @@
     return { x: Math.random() * G.W, y: waterTop() + 30 + Math.random() * (sandTop() - waterTop() - 60),
       vx: dir * (24 + Math.random() * 26), vy: 0, sp: G.H * (0.085 + Math.random() * 0.04), col: pick(FISH_COLORS), ph: Math.random() * 6.28, scared: 0, happy: 0 };
   }
-  function seabed() {
-    const decals = ['coral', 'coral2', 'seaweed', 'rock', 'starfish', 'shell'];
+  function newCritter() {
+    const k = pick(ocean.cfg.critters), dir = Math.random() < .5 ? 1 : -1;
+    const fly = (k === 'c_butterfly' || k === 'c_dove' || k === 'v_bird');
+    const top = waterTop() + 30, bot = sandTop() - 8;
+    return { k, x: Math.random() * G.W, fly, y: fly ? top + Math.random() * (bot - top) * 0.6 : bot - Math.random() * G.H * 0.04,
+      vx: dir * (18 + Math.random() * 26), sp: G.H * (0.06 + Math.random() * 0.04), ph: Math.random() * 6.28, scared: 0, happy: 0 };
+  }
+  function setupDecor() {
     ocean.decor = [];
-    const n = 9;
-    for (let i = 0; i < n; i++) ocean.decor.push({ k: pick(decals), x: (i + 0.5) / n * G.W + (Math.random() - .5) * 30, s: G.H * (0.09 + Math.random() * 0.05), ph: Math.random() * 6.28 });
+    if (ocean.water) { const decals = ['coral', 'coral2', 'seaweed', 'rock', 'starfish', 'shell'], n = 9; for (let i = 0; i < n; i++) ocean.decor.push({ k: pick(decals), x: (i + 0.5) / n * G.W + (Math.random() - .5) * 30, s: G.H * (0.09 + Math.random() * 0.05), ph: Math.random() * 6.28 }); return; }
+    const list = ocean.cfg.decor, n = list.length;
+    for (let i = 0; i < n; i++) { const big = /d_building|d_mountain|d_school|d_pine|i_tree/.test(list[i]); ocean.decor.push({ k: list[i], x: (i + 0.5) / n * G.W + (Math.random() - .5) * 40, s: G.H * (big ? 0.2 + Math.random() * 0.06 : 0.12 + Math.random() * 0.04), ph: Math.random() * 6.28 }); }
   }
 
   function binRects() {
     const n = DATA.BINS.length, pad = 8, gap = 8, w = (G.W - pad * 2 - gap * (n - 1)) / n, h = binH(), y = binsTop();
     return DATA.BINS.map((b, i) => ({ bin: b, x: pad + i * (w + gap), y, w, h }));
+  }
+
+  /* 陆地：小动物被垃圾惊扰 + 飘落粒子（叶/尘/雪）*/
+  function updateLand(dt, top, bot) {
+    ocean.critters.forEach(c => {
+      c.ph += dt; let near = false;
+      ocean.items.forEach(it => { const dx = c.x - it.x, dy = c.y - it.y; if (dx * dx + dy * dy < 9000) { near = true; c.vx += (dx > 0 ? 16 : -16) * dt; } });
+      c.scared = near ? Math.min(1, c.scared + dt * 3) : Math.max(0, c.scared - dt * 2);
+      const spd = (near ? 1.7 : 1) * c.sp;
+      c.x += c.vx * dt * (near ? 1.4 : 1);
+      if (c.vx > 0) c.vx = Math.min(c.vx, spd); else c.vx = Math.max(c.vx, -spd);
+      if (Math.abs(c.vx) < spd * 0.5) c.vx += (c.vx >= 0 ? 1 : -1) * spd * dt;
+      if (c.x < -70) c.x = G.W + 70; if (c.x > G.W + 70) c.x = -70;
+      if (c.happy) c.happy = Math.max(0, c.happy - dt);
+    });
+    const kind = ocean.cfg.particle, rate = kind === 'dust' ? 4 : 2.4;
+    if (Math.random() < dt * rate) ocean.parts.push({ x: Math.random() * G.W, y: top - 10, vx: (Math.random() - .5) * 20, vy: (kind === 'dust' ? 6 : 14) + Math.random() * 16, r: kind === 'dust' ? 1.5 + Math.random() * 2 : 5 + Math.random() * 5, rot: Math.random() * 6.28, vr: (Math.random() - .5) * 3, age: 0, life: 6, kind });
+    for (let i = ocean.parts.length - 1; i >= 0; i--) { const p = ocean.parts[i]; p.age += dt; p.x += p.vx * dt + Math.sin(p.age * 2) * 10 * dt; p.y += p.vy * dt; p.rot += p.vr * dt; if (p.y > bot + 12 || p.age > p.life) ocean.parts.splice(i, 1); }
+  }
+
+  function drawLandEnv(ctx, t) {
+    const c = ocean.cfg, st = sandTop();
+    // 天空
+    const sg = ctx.createLinearGradient(0, 0, 0, st); sg.addColorStop(0, c.sky[0]); sg.addColorStop(1, c.sky[1]); ctx.fillStyle = sg; ctx.fillRect(0, 0, G.W, st);
+    // 太阳 + 云
+    ctx.fillStyle = 'rgba(255,238,150,.9)'; ctx.beginPath(); ctx.arc(G.W * 0.84, waterTop() + G.H * 0.04, G.H * 0.045, 0, 7); ctx.fill();
+    cloud(ctx, G.W * 0.2, waterTop() + G.H * 0.03, G.H * 0.028); cloud(ctx, G.W * 0.56, waterTop() + G.H * 0.06, G.H * 0.024);
+    // 地面
+    const gg = ctx.createLinearGradient(0, st, 0, G.H); gg.addColorStop(0, c.ground[0]); gg.addColorStop(1, c.ground[1]);
+    ctx.fillStyle = gg; ctx.beginPath(); ctx.moveTo(0, st); for (let x = 0; x <= G.W; x += 40) ctx.lineTo(x, st + Math.sin(x * 0.04 + 1) * 4); ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
+    // 装饰（树/楼/山，立在地面线）
+    ocean.decor.forEach(d => { ctx.save(); ctx.globalAlpha = 1; const dy = st - d.s * 0.34; Sprites.draw(ctx, d.k, d.x, dy, d.s, { rot: Math.sin(t * 0.6 + d.ph) * 0.015 }); ctx.restore(); });
+    // 小动物
+    ocean.critters.forEach(c2 => {
+      const flip = c2.vx < 0 ? -1 : 1, sz = G.H * 0.085 * (c2.scared > 0.3 ? 1.06 : 1);
+      ctx.save(); ctx.translate(c2.x, c2.y + (c2.fly ? Math.sin(c2.ph * 3) * 4 : 0)); ctx.scale(flip, 1); Sprites.draw(ctx, c2.k, 0, 0, sz); ctx.restore();
+      if (c2.scared > 0.5) { ctx.fillStyle = '#e74c3c'; ctx.font = 'bold ' + Math.round(G.H * 0.04) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', c2.x + (flip < 0 ? 14 : -14), c2.y - G.H * 0.05); }
+    });
+    // 飘落粒子
+    ocean.parts.forEach(p => {
+      const a = Math.min(1, p.age * 2) * (1 - Math.max(0, (p.age - p.life + 1)));
+      if (p.kind === 'leaf') Sprites.draw(ctx, 'c_leaf', p.x, p.y, p.r * 3, { rot: p.rot, alpha: a });
+      else { ctx.save(); ctx.globalAlpha = a * (p.kind === 'snow' ? 0.9 : 0.5); ctx.fillStyle = p.kind === 'snow' ? '#fff' : '#cdbfa0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); ctx.restore(); }
+    });
   }
 
   ocean._down = function (x, y) {
@@ -121,8 +189,9 @@
       ocean.items.splice(bi, 1); ocean.items.push(best);
       Audio2.sfx('collect');
       ocean.combo++; ocean.comboT = 1.3;
-      for (let k = 0; k < 6; k++) ocean.droplets.push({ x: best.x + (Math.random() - .5) * best.s, y: best.y, vx: (Math.random() - .5) * 70, vy: -30 - Math.random() * 50, age: 0 });
-      if (ocean.combo >= 3) Eng.floatText(x, y - best.s * 0.6, '连捞 ×' + ocean.combo + '! 好准!', '#ffe066');
+      if (ocean.water) { for (let k = 0; k < 6; k++) ocean.droplets.push({ x: best.x + (Math.random() - .5) * best.s, y: best.y, vx: (Math.random() - .5) * 70, vy: -30 - Math.random() * 50, age: 0 }); }
+      else Eng.burst(best.x, best.y, '#e7d3a0', 7);
+      if (ocean.combo >= 3) Eng.floatText(x, y - best.s * 0.6, (ocean.water ? '连捞 ×' : '连捡 ×') + ocean.combo + '! 好准!', '#ffe066');
     } else { ocean.combo = 0; }                          // 挥空，断连击（技巧）
   };
   ocean._move = function (x, y) { if (ocean.drag) { ocean.drag.it.x = x - ocean.drag.dx; ocean.drag.it.y = y - ocean.drag.dy; ocean.drag.it.va = 0; ocean.drag.it.ang *= 0.8; } };
@@ -139,8 +208,8 @@
       ocean.items = ocean.items.filter(o => o !== d.it);
       if (t.yield) { Eng.addMat(t.yield, 1); Eng.floatText(r.x + r.w / 2, r.y - 12, '+1 ' + DATA.MATERIALS[t.yield].name, DATA.MATERIALS[t.yield].color); Audio2.voice('got_mat'); }
       else { Eng.floatText(r.x + r.w / 2, r.y - 12, '处理好啦!', '#fff'); Audio2.voice('right'); }
-      // 附近小鱼开心地游过
-      ocean.fish.forEach(f => { if (Math.abs(f.x - (r.x + r.w / 2)) < 200) f.happy = 1; });
+      // 附近的小生灵开心地经过
+      (ocean.water ? ocean.fish : ocean.critters).forEach(c => { if (Math.abs(c.x - (r.x + r.w / 2)) < 200) c.happy = 1; });
       Eng.persist();
     } else {
       Audio2.sfx('bad'); ocean.shakeT = 0.45; d.it.vy = -30; d.it.vx = (Math.random() - .5) * 30;
@@ -159,29 +228,30 @@
       if (it.x < 40) { it.x = 40; it.vx = Math.abs(it.vx); } if (it.x > G.W - 40) { it.x = G.W - 40; it.vx = -Math.abs(it.vx); }
       if (it.y < top) { it.y = top; it.vy = Math.abs(it.vy); } if (it.y > bot) { it.y = bot; it.vy = -Math.abs(it.vy); }
     });
-    // 小鱼：躲避垃圾（被垃圾干扰）
-    ocean.fish.forEach(f => {
-      f.ph += dt; let steer = 0, near = false;
-      ocean.items.forEach(it => { const dx = f.x - it.x, dy = f.y - it.y, d2 = dx * dx + dy * dy; if (d2 < 9000) { near = true; steer += dy / (Math.abs(dx) + 20) * 0.5; f.vx += (dx > 0 ? 12 : -12) * dt; } });
-      f.scared = near ? Math.min(1, f.scared + dt * 3) : Math.max(0, f.scared - dt * 2);
-      f.vy += (steer * 30 - f.vy) * dt * 2 + Math.sin(f.ph * 2) * 6 * dt;
-      const spd = (near ? 1.5 : 1) * f.sp;
-      f.x += f.vx * dt * (near ? 1.6 : 1); f.y += f.vy * dt;
-      if (f.vx > 0) f.vx = Math.min(f.vx, spd); else f.vx = Math.max(f.vx, -spd);
-      if (Math.abs(f.vx) < spd * 0.6) f.vx += (f.vx >= 0 ? 1 : -1) * spd * dt;
-      if (f.y < top) { f.y = top; f.vy = Math.abs(f.vy); } if (f.y > bot) { f.y = bot; f.vy = -Math.abs(f.vy); }
-      if (f.x < -60) { f.x = G.W + 60; } if (f.x > G.W + 60) { f.x = -60; }
-      if (f.happy) f.happy = Math.max(0, f.happy - dt);
-    });
-    // 水母漂浮
-    const top2 = waterTop() + 10;
-    ocean.jellies.forEach(j => { j.ph += dt; j.x += j.vx * dt; j.y += j.vy * dt; if (j.y < top2) j.vy = Math.abs(j.vy); if (j.y > sandTop() - 60) j.vy = -Math.abs(j.vy); if (j.x < -40) j.x = G.W + 40; if (j.x > G.W + 40) j.x = -40; });
-    // 浮游 + 气泡
-    ocean.plankton.forEach(p => { p.y += p.vy * dt; p.x += Math.sin(p.ph += dt) * 6 * dt; if (p.y < waterTop()) { p.y = G.H; p.x = Math.random() * G.W; } });
-    if (Math.random() < dt * 3) ocean.bubbles.push({ x: Math.random() * G.W, y: G.H, vy: -28 - Math.random() * 34, r: 3 + Math.random() * 6, age: 0, wob: Math.random() * 6.28 });
-    // 拖拽时垃圾尾随气泡
-    if (ocean.drag && (ocean.trailT -= dt) <= 0) { ocean.trailT = 0.09; ocean.bubbles.push({ x: ocean.drag.it.x + (Math.random() - .5) * 20, y: ocean.drag.it.y, vy: -40 - Math.random() * 30, r: 2 + Math.random() * 4, age: 0, wob: Math.random() * 6.28 }); }
-    for (let i = ocean.bubbles.length - 1; i >= 0; i--) { const b = ocean.bubbles[i]; b.y += b.vy * dt; b.x += Math.sin((b.wob += dt * 4)) * 8 * dt; b.age += dt; if (b.age > 3) ocean.bubbles.splice(i, 1); }
+    if (ocean.water) {
+      // 小鱼：躲避垃圾（被垃圾干扰）
+      ocean.fish.forEach(f => {
+        f.ph += dt; let steer = 0, near = false;
+        ocean.items.forEach(it => { const dx = f.x - it.x, dy = f.y - it.y, d2 = dx * dx + dy * dy; if (d2 < 9000) { near = true; steer += dy / (Math.abs(dx) + 20) * 0.5; f.vx += (dx > 0 ? 12 : -12) * dt; } });
+        f.scared = near ? Math.min(1, f.scared + dt * 3) : Math.max(0, f.scared - dt * 2);
+        f.vy += (steer * 30 - f.vy) * dt * 2 + Math.sin(f.ph * 2) * 6 * dt;
+        const spd = (near ? 1.5 : 1) * f.sp;
+        f.x += f.vx * dt * (near ? 1.6 : 1); f.y += f.vy * dt;
+        if (f.vx > 0) f.vx = Math.min(f.vx, spd); else f.vx = Math.max(f.vx, -spd);
+        if (Math.abs(f.vx) < spd * 0.6) f.vx += (f.vx >= 0 ? 1 : -1) * spd * dt;
+        if (f.y < top) { f.y = top; f.vy = Math.abs(f.vy); } if (f.y > bot) { f.y = bot; f.vy = -Math.abs(f.vy); }
+        if (f.x < -60) { f.x = G.W + 60; } if (f.x > G.W + 60) { f.x = -60; }
+        if (f.happy) f.happy = Math.max(0, f.happy - dt);
+      });
+      const top2 = waterTop() + 10;
+      ocean.jellies.forEach(j => { j.ph += dt; j.x += j.vx * dt; j.y += j.vy * dt; if (j.y < top2) j.vy = Math.abs(j.vy); if (j.y > sandTop() - 60) j.vy = -Math.abs(j.vy); if (j.x < -40) j.x = G.W + 40; if (j.x > G.W + 40) j.x = -40; });
+      ocean.plankton.forEach(p => { p.y += p.vy * dt; p.x += Math.sin(p.ph += dt) * 6 * dt; if (p.y < waterTop()) { p.y = G.H; p.x = Math.random() * G.W; } });
+      if (Math.random() < dt * 3) ocean.bubbles.push({ x: Math.random() * G.W, y: G.H, vy: -28 - Math.random() * 34, r: 3 + Math.random() * 6, age: 0, wob: Math.random() * 6.28 });
+      if (ocean.drag && (ocean.trailT -= dt) <= 0) { ocean.trailT = 0.09; ocean.bubbles.push({ x: ocean.drag.it.x + (Math.random() - .5) * 20, y: ocean.drag.it.y, vy: -40 - Math.random() * 30, r: 2 + Math.random() * 4, age: 0, wob: Math.random() * 6.28 }); }
+      for (let i = ocean.bubbles.length - 1; i >= 0; i--) { const b = ocean.bubbles[i]; b.y += b.vy * dt; b.x += Math.sin((b.wob += dt * 4)) * 8 * dt; b.age += dt; if (b.age > 3) ocean.bubbles.splice(i, 1); }
+    } else {
+      updateLand(dt, top, bot);
+    }
     // 涟漪 + 分类箱开盖动画
     for (let i = ocean.ripples.length - 1; i >= 0; i--) { ocean.ripples[i].age += dt; if (ocean.ripples[i].age > ocean.ripples[i].max) ocean.ripples.splice(i, 1); }
     for (const k in ocean.binAnim) { ocean.binAnim[k] -= dt; if (ocean.binAnim[k] <= 0) delete ocean.binAnim[k]; }
@@ -195,6 +265,7 @@
   ocean.draw = function (ctx) {
     ocean.buttons = [];
     const t = G.t, sh = ocean.shakeT > 0 ? Math.sin(ocean.shakeT * 60) * 5 : 0;
+    if (!ocean.water) { drawLandEnv(ctx, t); ocean.drawEnvDone = true; } else { ocean.drawEnvDone = false;
     // 水体渐变（更通透的层次）
     const wg = ctx.createLinearGradient(0, 0, 0, G.H);
     wg.addColorStop(0, '#56c2e8'); wg.addColorStop(0.35, '#2a93c8'); wg.addColorStop(0.7, '#15709f'); wg.addColorStop(1, '#083f63');
@@ -225,7 +296,8 @@
     });
     // 气泡（带高光）
     ocean.bubbles.forEach(b => { const a = 0.35 * (1 - b.age / 3); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fillStyle = 'rgba(220,245,255,' + a + ')'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,' + (a + 0.15) + ')'; ctx.stroke(); ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.3, 0, 7); ctx.fillStyle = 'rgba(255,255,255,' + (a + 0.25) + ')'; ctx.fill(); });
-    // 垃圾（白色光晕托底，让图标在水里清晰跳出 + 拖拽放大发光）
+    } // end water env
+    // 垃圾（白色光晕托底，让图标清晰跳出 + 拖拽放大发光）
     ocean.items.forEach(it => {
       const drag = ocean.drag && ocean.drag.it === it;
       const iy = it.y + (drag ? 0 : Math.sin(it.ph) * 4), sz = it.s * (drag ? 1.2 : 1);
@@ -251,10 +323,12 @@
     // 水滴
     ctx.fillStyle = 'rgba(205,242,255,.85)';
     ocean.droplets.forEach(d => { ctx.save(); ctx.globalAlpha = 0.85 * (1 - d.age / 0.75); ctx.beginPath(); ctx.ellipse(d.x, d.y, 2.4, 4, 0, 0, 7); ctx.fillStyle = 'rgba(205,242,255,.9)'; ctx.fill(); ctx.restore(); });
-    // 全屏水波焦散（统一光感，叠在场景之上）
-    Marine.caustics(ctx, G.W, G.H, t, 0.16, 'overlay');
-    // 景深暗角
-    Marine.depthVignette(ctx, G.W, G.H);
+    if (ocean.water) {
+      // 全屏水波焦散（统一光感，叠在场景之上）
+      Marine.caustics(ctx, G.W, G.H, t, 0.16, 'overlay');
+      // 景深暗角
+      Marine.depthVignette(ctx, G.W, G.H);
+    }
 
     // 涟漪
     ocean.ripples.forEach(rp => { const k = rp.age / rp.max; ctx.save(); ctx.globalAlpha = (1 - k) * 0.8; ctx.lineWidth = 4 * (1 - k) + 1; ctx.strokeStyle = lighten(rp.col, 40); ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 10 + k * 60, (10 + k * 60) * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore(); });
