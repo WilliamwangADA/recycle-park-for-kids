@@ -83,14 +83,14 @@ window.DATA = (function () {
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */
   const LEVELS = [
-    { id: 'ocean',  name: '大海', theme: 'ocean', unlocked: true,
+    { id: 'ocean',  name: '大海', theme: 'ocean', unlocked: true, tool: 'net',
       trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot'] },
-    { id: 'park',   name: '公园', theme: 'park',  unlocked: false, trash: [] },
-    { id: 'town',   name: '小区', theme: 'town',  unlocked: false, trash: [] },
-    { id: 'school', name: '学校', theme: 'school',unlocked: false, trash: [] },
-    { id: 'forest', name: '森林', theme: 'forest',unlocked: false, trash: [] },
-    { id: 'mount',  name: '大山', theme: 'mount', unlocked: false, trash: [] },
-    { id: 'city',   name: '城市', theme: 'city',  unlocked: false, trash: [] },
+    { id: 'park',   name: '公园', theme: 'park',  unlocked: false, tool: 'tongs', trash: [] },
+    { id: 'town',   name: '小区', theme: 'town',  unlocked: false, tool: 'broom', trash: [] },
+    { id: 'school', name: '学校', theme: 'school',unlocked: false, tool: 'tongs', trash: [] },
+    { id: 'forest', name: '森林', theme: 'forest',unlocked: false, tool: 'tongs', trash: [] },
+    { id: 'mount',  name: '大山', theme: 'mount', unlocked: false, tool: 'broom', trash: [] },
+    { id: 'city',   name: '城市', theme: 'city',  unlocked: false, tool: 'broom', trash: [] },
   ];
 
   /* ---- 乐园访客（人气达标解锁）---- */

@@ -76,6 +76,7 @@
     ocean.jellies = []; for (let i = 0; i < 2; i++) ocean.jellies.push({ x: Math.random() * G.W, y: waterTop() + 40 + Math.random() * 120, s: G.H * (0.07 + Math.random() * 0.03), vx: (Math.random() - .5) * 8, vy: -4 - Math.random() * 4, ph: Math.random() * 6.28 });
     ocean.plankton = []; for (let i = 0; i < 46; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.8, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
     ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
+    ocean.tool = ocean.lv.tool || 'net'; ocean.scoopT = 0; ocean.droplets = []; ocean.combo = 0; ocean.comboT = 0;
     Audio2.sfx('splash'); Audio2.voice('ocean_intro');
   };
   ocean.resize = function () { Marine.init(G.W, G.H); seabed(); };
@@ -110,10 +111,19 @@
   }
 
   ocean._down = function (x, y) {
-    for (let i = ocean.items.length - 1; i >= 0; i--) {
-      const it = ocean.items[i], r = it.s * 0.55;
-      if (Math.abs(x - it.x) < r && Math.abs(y - it.y) < r) { ocean.drag = { it, i, dx: x - it.x, dy: y - it.y }; ocean.items.splice(i, 1); ocean.items.push(it); Audio2.sfx('pop'); return; }
-    }
+    if (y < waterTop() || y > sandTop()) return;        // 只在水里挥网
+    ocean.scoopT = 0.3; Audio2.sfx('splash');           // 挥网动画 + swoosh
+    const R = G.H * 0.085;                               // 网口捕捉半径(略宽松；但垃圾在漂=要瞄准=技巧)
+    let best = null, bd = 1e9, bi = -1;
+    for (let i = 0; i < ocean.items.length; i++) { const it = ocean.items[i]; const d = Math.hypot(x - it.x, y - it.y); if (d < R && d < bd) { bd = d; best = it; bi = i; } }
+    if (best) {
+      ocean.drag = { it: best, dx: x - best.x, dy: y - best.y };
+      ocean.items.splice(bi, 1); ocean.items.push(best);
+      Audio2.sfx('collect');
+      ocean.combo++; ocean.comboT = 1.3;
+      for (let k = 0; k < 6; k++) ocean.droplets.push({ x: best.x + (Math.random() - .5) * best.s, y: best.y, vx: (Math.random() - .5) * 70, vy: -30 - Math.random() * 50, age: 0 });
+      if (ocean.combo >= 3) Eng.floatText(x, y - best.s * 0.6, '连捞 ×' + ocean.combo + '! 好准!', '#ffe066');
+    } else { ocean.combo = 0; }                          // 挥空，断连击（技巧）
   };
   ocean._move = function (x, y) { if (ocean.drag) { ocean.drag.it.x = x - ocean.drag.dx; ocean.drag.it.y = y - ocean.drag.dy; ocean.drag.it.va = 0; ocean.drag.it.ang *= 0.8; } };
   ocean._up = function (x, y) {
@@ -175,6 +185,11 @@
     // 涟漪 + 分类箱开盖动画
     for (let i = ocean.ripples.length - 1; i >= 0; i--) { ocean.ripples[i].age += dt; if (ocean.ripples[i].age > ocean.ripples[i].max) ocean.ripples.splice(i, 1); }
     for (const k in ocean.binAnim) { ocean.binAnim[k] -= dt; if (ocean.binAnim[k] <= 0) delete ocean.binAnim[k]; }
+    // 工具挥动动画 / 连击 / 网中滴水
+    if (ocean.scoopT > 0) ocean.scoopT -= dt;
+    if (ocean.comboT > 0) { ocean.comboT -= dt; if (ocean.comboT <= 0) ocean.combo = 0; }
+    if (ocean.drag && Math.random() < dt * 9) ocean.droplets.push({ x: ocean.drag.it.x + (Math.random() - .5) * ocean.drag.it.s * 0.6, y: ocean.drag.it.y + ocean.drag.it.s * 0.3, vx: (Math.random() - .5) * 10, vy: 18, age: 0 });
+    for (let i = ocean.droplets.length - 1; i >= 0; i--) { const d = ocean.droplets[i]; d.age += dt; d.vy += 420 * dt; d.x += d.vx * dt; d.y += d.vy * dt; if (d.age > 0.75) ocean.droplets.splice(i, 1); }
   };
 
   ocean.draw = function (ctx) {
@@ -224,8 +239,18 @@
       Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, iy, sz, { rot: drag ? Math.sin(t * 8) * 0.06 : it.ang });
       if (drag) ctx.restore();
     });
-    // 拖拽：抄网
-    if (ocean.drag) Sprites.draw(ctx, 'net', ocean.drag.it.x, ocean.drag.it.y + ocean.drag.it.s * 0.5, ocean.drag.it.s * 1.25, { alpha: 0.92 });
+    // 工具（捞网/夹子/扫把）+ 挥动捞起动画
+    const scoop = ocean.scoopT > 0 ? Math.sin((1 - ocean.scoopT / 0.3) * Math.PI) : 0;   // 0→1→0
+    if (ocean.drag) {                                   // 兜住垃圾
+      const it = ocean.drag.it; ctx.save(); ctx.translate(it.x, it.y); ctx.rotate(0.18 + scoop * 0.25);
+      Sprites.draw(ctx, ocean.tool, 0, it.s * 0.32, it.s * 1.55, { alpha: 0.95 }); ctx.restore();
+    } else if (G.pointer.down && G.pointer.y > waterTop() && G.pointer.y < sandTop()) {  // 挥空中的网
+      ctx.save(); ctx.translate(G.pointer.x, G.pointer.y); ctx.rotate(0.5 - scoop * 0.7);
+      Sprites.draw(ctx, ocean.tool, 0, 0, G.H * 0.12 * (1 + scoop * 0.18), { alpha: 0.9 }); ctx.restore();
+    }
+    // 水滴
+    ctx.fillStyle = 'rgba(205,242,255,.85)';
+    ocean.droplets.forEach(d => { ctx.save(); ctx.globalAlpha = 0.85 * (1 - d.age / 0.75); ctx.beginPath(); ctx.ellipse(d.x, d.y, 2.4, 4, 0, 0, 7); ctx.fillStyle = 'rgba(205,242,255,.9)'; ctx.fill(); ctx.restore(); });
     // 全屏水波焦散（统一光感，叠在场景之上）
     Marine.caustics(ctx, G.W, G.H, t, 0.16, 'overlay');
     // 景深暗角

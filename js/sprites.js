@@ -171,8 +171,12 @@ window.Sprites = (function () {
   F.starfish = g => { g.save(); g.translate(50, 54); for (let i = 0; i < 5; i++) { g.rotate(6.283 / 5); g.beginPath(); g.moveTo(0, 0); g.lineTo(-9, -14); g.quadraticCurveTo(0, -30, 9, -14); g.closePath(); fill(g, vgrad(g, -30, 0, '#ffb24d', '#f08a2a')); stroke(g, 2.6); } g.restore(); circ(g, 50, 54, 6); fill(g, '#ffd07a'); for (let i = 0; i < 6; i++) circ(g, 50 + Math.cos(i) * 3, 54 + Math.sin(i) * 3, 1.2), fill(g, '#e0782a'); };
   F.shell = g => { g.beginPath(); g.moveTo(50, 84); g.quadraticCurveTo(18, 70, 30, 36); g.quadraticCurveTo(50, 18, 70, 36); g.quadraticCurveTo(82, 70, 50, 84); g.closePath(); fill(g, vgrad(g, 18, 84, '#ffd9e6', '#ff9fc0')); stroke(g, 3); for (let i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(50, 80); g.quadraticCurveTo(50 + i * 14, 50, 50 + i * 8, 30); stroke(g, 2, 'rgba(220,120,160,.6)'); } };
   F.bubble = g => { circ(g, 50, 50, 30); fill(g, 'rgba(255,255,255,.22)'); stroke(g, 2, 'rgba(255,255,255,.5)'); spec(g, 40, 40, 8); };
-  // 抄网（拖动光标）
+  // 捞网（海里捞垃圾）
   F.net = g => { g.beginPath(); g.arc(50, 42, 26, 0.5, Math.PI - 0.5, true); g.closePath(); fill(g, 'rgba(255,255,255,.25)'); stroke(g, 3, '#d6c08a'); circ(g, 50, 42, 26); g.save(); g.clip(); for (let i = 0; i < 8; i++) { g.beginPath(); g.moveTo(24 + i * 7, 16); g.lineTo(24 + i * 7, 70); g.moveTo(24, 24 + i * 6); g.lineTo(76, 24 + i * 6); stroke(g, 0.8, 'rgba(120,100,60,.4)'); } g.restore(); rr(g, 47, 60, 6, 30, 3); fill(g, '#c08a4e'); stroke(g, 2.5); };
+  // 夹子（地面夹垃圾）—— 张开的钳口
+  F.tongs = g => { g.save(); g.translate(50, 50); for (const s of [-1, 1]) { g.beginPath(); g.moveTo(0, 24); g.lineTo(s * 6, -6); g.quadraticCurveTo(s * 20, -22, s * 12, -34); g.quadraticCurveTo(s * 8, -26, s * 4, -16); g.lineTo(s * 2, 8); stroke(g, 5, '#c0392b'); } circ(g, 0, 22, 4); fill(g, '#7f8c8d'); stroke(g, 2); g.restore(); };
+  // 扫把（地面扫垃圾）
+  F.broom = g => { g.save(); g.translate(50, 50); g.rotate(0.3); rr(g, -3, -34, 6, 44, 3); fill(g, '#b07a42'); stroke(g, 2.5); g.beginPath(); g.moveTo(-14, 12); g.lineTo(14, 12); g.lineTo(20, 34); g.lineTo(-20, 34); g.closePath(); fill(g, '#f0c450'); stroke(g, 2.5); for (let i = -3; i <= 3; i++) { g.beginPath(); g.moveTo(i * 5, 14); g.lineTo(i * 6, 33); stroke(g, 1.5, 'rgba(150,100,40,.6)'); } g.restore(); };
 
   /* ---------- 对外 ---------- */
   function draw(ctx, key, cx, cy, size, opts) {
