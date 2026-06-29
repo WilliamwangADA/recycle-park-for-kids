@@ -153,11 +153,14 @@
     });
   }
   // Ada 公主：整个乐园和帐篷的主人
-  function drawAda(ctx, x, y, size) {
+  function drawAda(ctx, x, y, size, face, hop) {
     const t = G.t, bob = Math.sin(t * 2) * size * 0.05;
-    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(x, y + size * 0.42, size * 0.3, size * 0.1, 0, 0, 7); ctx.fill();
-    if (window.Princess) Princess.draw(ctx, x, y + bob, size, t, {});
-    else Sprites.draw(ctx, 'ada', x, y + bob, size);
+    ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(x, y + size * 0.42, size * 0.3, size * 0.1, 0, 0, 7); ctx.fill();   // 影子贴地
+    ctx.save();
+    if (face === -1) { ctx.translate(x, 0); ctx.scale(-1, 1); ctx.translate(-x, 0); }
+    if (window.Princess) Princess.draw(ctx, x, y + bob - (hop || 0), size, t, {});
+    else Sprites.draw(ctx, 'ada', x, y + bob - (hop || 0), size);
+    ctx.restore();
     const lw = size * 0.82, lh = size * 0.2, lx = x - lw / 2, ly = y + size * 0.44;
     rr(ctx, lx, ly, lw, lh, lh * 0.5); ctx.fillStyle = '#fff6fb'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#e84393'; ctx.stroke();
     ctx.fillStyle = '#e84393'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.62) + 'px "PingFang SC",sans-serif';
@@ -237,13 +240,36 @@
       return ids.map((id, i) => ({ id, x: pad + i * (iw + gap) + S.trayScroll, y: tT + 4, w: iw, h: h - 8 }));
     }
 
-    S.enter = function () { S.drag = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; ensureBase(); recomputePop(true); Audio2.voice(opts.voice); };
+    function adaSize() { return opts.ada === 'tent' ? G.H * 0.15 : G.H * 0.12; }
+    function adaHome() {                                  // 默认位置
+      if (opts.ada === 'park') { const base = listArr().find(p => p.base); return base ? { x: base.x - dsp(base) * 0.62, y: base.y + dsp(base) * 0.12 } : { x: G.W * 0.3, y: (groundTop() + trayTop()) / 2 }; }
+      return { x: G.W * 0.5, y: trayTop() - G.H * 0.085 };
+    }
+    function initAda() {
+      if (!opts.ada) return;
+      const sv = G.save.adaPos[opts.ada], h = adaHome(), ix = sv ? sv.x : h.x, iy = sv ? sv.y : h.y;
+      S.ada = { x: ix, y: iy, tx: ix, ty: iy, face: 1, wt: 2, moving: false };
+    }
+    S.enter = function () { S.drag = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; ensureBase(); initAda(); recomputePop(true); Audio2.voice(opts.voice); };
     S.wheel = function (dy) { S.trayScroll = Math.min(0, Math.max(-S.trayMax, S.trayScroll - dy)); };
+    S.update = function (dt) {
+      if (!opts.ada || !S.ada) return;
+      const a = S.ada;
+      if (S.drag && S.drag.kind === 'ada') { a.moving = false; return; }
+      const gT = groundTop(), tT = trayTop();
+      a.wt -= dt;
+      if (a.wt <= 0) { a.tx = 50 + Math.random() * (G.W - 100); a.ty = gT + 40 + Math.random() * (tT - gT - 90); a.wt = 2.5 + Math.random() * 3.5; }
+      const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+      if (d > 3) { const step = Math.min(d, G.H * 0.09 * dt); a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > 1) a.face = dx > 0 ? 1 : -1; a.moving = true; }
+      else a.moving = false;
+    };
 
     S.down = function (x, y) {
       S._active = null; S.trayDrag = null;
       for (const b of (S.buttons || [])) if (hit(b, x, y)) { b.pressed = true; S._active = b; return; }
       const gT = groundTop(), tT = trayTop();
+      // 先判 Ada 公主（乐园主人，可拖动）
+      if (opts.ada && S.ada) { const sz = adaSize(); if (Math.abs(x - S.ada.x) < sz * 0.34 && y > S.ada.y - sz * 0.55 && y < S.ada.y + sz * 0.5) { S.drag = { kind: 'ada', dx: x - S.ada.x, dy: y - S.ada.y }; Audio2.sfx('pop'); return; } }
       if (y > gT && y < tT) {
         const p = pickPlaced(x, y);
         if (p) { S.drag = { kind: 'placed', p, item: p.item, dx: x - p.x, dy: y - p.y, x, y, sx: x, sy: y }; Audio2.sfx('pop'); return; }
@@ -260,6 +286,11 @@
       if (S.trayDrag) { S.trayScroll = Math.min(0, Math.max(-S.trayMax, S.trayDrag.base + (x - S.trayDrag.sx))); return; }
       if (!S.drag) return;
       S.drag.x = x; S.drag.y = y;
+      if (S.drag.kind === 'ada') {
+        const gT = groundTop(), tT = trayTop(), nx = Math.max(36, Math.min(G.W - 36, x - S.drag.dx)), ny = Math.max(gT + 30, Math.min(tT - 20, y - S.drag.dy));
+        if (Math.abs(nx - S.ada.x) > 1) S.ada.face = nx > S.ada.x ? 1 : -1;
+        S.ada.x = nx; S.ada.y = ny; return;
+      }
       if (S.drag.kind === 'placed') {
         const p = S.drag.p, gT = groundTop(), tT = trayTop();
         p.x = Math.max(30, Math.min(G.W - 30, x - S.drag.dx));
@@ -271,6 +302,11 @@
       if (a && hit(a, x, y) && a.onTap) { Audio2.sfx('click'); a.onTap(); S._active = null; S.drag = null; S.trayDrag = null; return; }
       S._active = null; S.trayDrag = null;
       const dr = S.drag; S.drag = null; if (!dr) return;
+      if (dr.kind === 'ada') {                            // 放下 Ada 公主，记住位置，稍后继续溜达
+        G.save.adaPos[opts.ada] = { x: S.ada.x, y: S.ada.y };
+        S.ada.tx = S.ada.x; S.ada.ty = S.ada.y; S.ada.wt = 2.5;
+        Audio2.sfx('place'); Eng.persist(); return;
+      }
       const gT = groundTop(), tT = trayTop(), onGround = y > gT && y < tT, onTray = y >= tT;
       const tz = trashZone(), onTrash = x > tz.x && x < tz.x + tz.w && y > tz.y - 10 && y < tz.y + tz.h + 10;
 
@@ -340,14 +376,17 @@
         }
       });
       // 叠放高亮
-      if (S.drag && DATA.ITEMS[S.drag.item].onTop) {
+      if (S.drag && S.drag.item && DATA.ITEMS[S.drag.item] && DATA.ITEMS[S.drag.item].onTop) {
         const surf = surfaceAt(S.drag.x, S.drag.y, S.drag.kind === 'placed' ? S.drag.p : null);
         if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w, surfaceTopY(surf) - 7, w * 2, 14); ctx.restore(); }
       }
 
-      // Ada 公主
-      if (opts.ada === 'park') { const base = listArr().find(p => p.base); const ax = base ? base.x - dsp(base) * 0.62 : G.W * 0.3, ay = base ? base.y + dsp(base) * 0.12 : (gT + tT) / 2; drawAda(ctx, ax, ay, G.H * 0.12); }
-      else if (opts.ada === 'tent') { drawAda(ctx, G.W * 0.5, tT - G.H * 0.085, G.H * 0.15); }
+      // Ada 公主（乐园主人，可拖动 + 自己溜达）
+      if (opts.ada && S.ada) {
+        const sz = adaSize(), dragging = S.drag && S.drag.kind === 'ada';
+        const hop = (S.ada.moving || dragging) ? Math.abs(Math.sin(G.t * 9)) * sz * 0.05 : 0;
+        drawAda(ctx, S.ada.x, S.ada.y, sz, S.ada.face, hop);
+      }
 
       // 顶部条 / 删除区
       if (opts.showVisitors) drawVisitorBar(ctx);

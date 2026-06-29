@@ -19,6 +19,7 @@ window.Game = (function () {
       built: {},             // 已造物品 {itemId: count}
       placed: [],            // 乐园里摆放 [{id, item, x, y, onId?}]
       tentPlaced: [],        // 帐篷内布置 [{id, item, x, y, onId?}]
+      adaPos: {},            // Ada 公主位置 {park:{x,y}, tent:{x,y}}（可拖动+自己溜达）
       placeSeq: 1,           // 摆放项唯一 id 自增
       stars: 0,              // 分类星星（货币之一，给造物提示用）
       popularity: 0,         // 人气
