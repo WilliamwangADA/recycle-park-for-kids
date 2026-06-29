@@ -18,6 +18,7 @@ window.Game = (function () {
       mats: {},              // 材料 {matId: count}
       built: {},             // 已造物品 {itemId: count}
       placed: [],            // 乐园里摆放 [{id, item, x, y, onId?}]
+      tentPlaced: [],        // 帐篷内布置 [{id, item, x, y, onId?}]
       placeSeq: 1,           // 摆放项唯一 id 自增
       stars: 0,              // 分类星星（货币之一，给造物提示用）
       popularity: 0,         // 人气
@@ -33,7 +34,7 @@ window.Game = (function () {
     for (const k in d) if (G.save[k] == null) G.save[k] = d[k];
     // 给旧存档的摆放项补 id
     let mx = 0;
-    G.save.placed.forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
+    G.save.placed.concat(G.save.tentPlaced).forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
     if (G.save.placeSeq <= mx) G.save.placeSeq = mx + 1;
   }
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.save)); } catch (e) {} }
