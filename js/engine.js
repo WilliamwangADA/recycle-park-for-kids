@@ -47,10 +47,13 @@ window.Game = (function () {
   /* ---------- 场景切换 ---------- */
   function go(name, arg) {
     if (G.scene && G.scene.exit) G.scene.exit();
+    G.cur = name;
     G.scene = G.scenes[name];
     G.fx = [];
     if (G.scene && G.scene.enter) G.scene.enter(arg);
   }
+  // 随时打开建造页（记住从哪来，造完返回）
+  function openCraft() { if (G.cur !== 'craft') G.returnTo = G.cur; go('craft'); }
 
   /* ---------- 主循环 ---------- */
   function frame(ts) {
@@ -152,29 +155,35 @@ window.Game = (function () {
     ctx.fillStyle = g; ctx.fillRect(0, 0, G.W, G.H);
   }
 
-  /* 顶部资源条（材料/星星）通用绘制 */
-  function topBar(ctx) {
-    const h = Math.max(46, G.H * 0.075), pad = 10;
+  /* 顶部原料计分牌（6 种材料 + 星星），返回底部 y */
+  function topBar(ctx, y) {
+    const pad = 10, h = Math.max(44, G.H * 0.072); y = y == null ? pad : y;
     ctx.save();
-    roundRect(ctx, pad, pad, G.W - pad * 2, h, 16);
-    ctx.fillStyle = 'rgba(255,255,255,.82)'; ctx.fill();
+    // 外壳
+    roundRect(ctx, pad, y, G.W - pad * 2, h, 14);
+    const gr = ctx.createLinearGradient(0, y, 0, y + h);
+    gr.addColorStop(0, 'rgba(255,255,255,.94)'); gr.addColorStop(1, 'rgba(236,244,250,.92)');
+    ctx.fillStyle = gr; ctx.fill();
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.stroke();
     const mats = DATA.MATERIALS, keys = Object.keys(mats);
-    const cell = (G.W - pad * 2 - 80) / keys.length;
-    let x = pad + 20;
+    const starW = h * 1.5;
+    const cell = (G.W - pad * 2 - starW) / keys.length;
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-    ctx.font = 'bold ' + Math.round(h * 0.4) + 'px "PingFang SC",sans-serif';
-    keys.forEach(k => {
-      Sprites.draw(ctx, mats[k].icon, x + h * 0.32, pad + h / 2, h * 0.66);
+    keys.forEach((k, i) => {
+      const cx = pad + i * cell + 6;
+      // pill
+      roundRect(ctx, cx, y + h * 0.16, cell - 6, h * 0.68, h * 0.34);
+      ctx.fillStyle = (G.save.mats[k] || 0) > 0 ? '#fff' : 'rgba(255,255,255,.5)'; ctx.fill();
+      Sprites.draw(ctx, mats[k].icon, cx + h * 0.36, y + h / 2, h * 0.62);
       ctx.fillStyle = '#43342b';
-      ctx.fillText('×' + (G.save.mats[k] || 0), x + h * 0.66, pad + h / 2);
-      x += cell;
+      ctx.font = 'bold ' + Math.round(h * 0.36) + 'px "PingFang SC",sans-serif';
+      ctx.fillText((G.save.mats[k] || 0), cx + h * 0.7, y + h / 2 + 1);
     });
-    // 星星
-    ctx.fillStyle = '#f6b73c';
-    ctx.font = 'bold ' + Math.round(h * 0.42) + 'px "PingFang SC",sans-serif';
-    ctx.fillText('⭐' + G.save.stars, G.W - pad - 70, pad + h / 2);
+    ctx.textAlign = 'right'; ctx.fillStyle = '#f0a500';
+    ctx.font = 'bold ' + Math.round(h * 0.4) + 'px "PingFang SC",sans-serif';
+    ctx.fillText('⭐' + G.save.stars, G.W - pad - 12, y + h / 2 + 1);
     ctx.restore();
-    return pad + h;
+    return y + h;
   }
 
   /* ---------- 启动 ---------- */
@@ -191,7 +200,7 @@ window.Game = (function () {
   }
 
   return {
-    G, init, go, persist, resetSave,
+    G, init, go, openCraft, persist, resetSave,
     burst, floatText, drawButton, inBtn, roundRect, bg, topBar,
     // 便捷：给材料/星星等
     addMat(k, n) { G.save.mats[k] = (G.save.mats[k] || 0) + n; },

@@ -91,7 +91,12 @@
     const bw = Math.min(G.W * 0.5, 320), bh = G.H * 0.09;
     const goP = { x: (G.W - bw) / 2, y: G.H - bh - 10, w: bw, h: bh, label: '🏡 去布置乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.go('park') };
     craft.buttons.push(goP); btn(ctx, goP);
-    topNav(craft, ctx);
+    // 返回：回到来时的场景（大海/乐园/菜单）
+    const rt = G.returnTo || 'menu';
+    const lbl = rt === 'ocean' ? '◀ 回大海' : (rt === 'park' ? '◀ 回乐园' : '◀');
+    const s = Math.max(40, G.H * 0.07);
+    const back = { x: 12, y: 12, w: rt === 'menu' ? s : s * 2.6, h: s, label: lbl, color: '#ff7675', fs: Math.round(s * 0.4), onTap: () => Eng.go(rt) };
+    craft.buttons.push(back); btn(ctx, back);
   };
   function doCraft(id, it, fxX, fxY) {
     if (!canAfford(it.cost)) { Audio2.voice('need_mat'); return; }
@@ -240,7 +245,7 @@
 
     // 顶部按钮：造东西 / 返回
     const bw = Math.min(G.W * 0.32, 200), bh = Math.max(40, G.H * 0.07);
-    const cb = { x: G.W - bw - 12, y: 12, w: bw, h: bh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(bh * 0.32), onTap: () => Eng.go('craft') };
+    const cb = { x: G.W - bw - 12, y: 12, w: bw, h: bh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(bh * 0.32), onTap: () => Eng.openCraft() };
     park.buttons.push(cb); btn(ctx, cb);
     topNav(park, ctx);
   };
