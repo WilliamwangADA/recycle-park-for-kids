@@ -131,13 +131,22 @@
      场景：装饰乐园（摆放类）
      ======================================================================= */
   const park = {};
-  park.enter = function () { park.drag = null; park.trayScroll = 0; park.trayMax = 0; park._active = null; park.trayDrag = null; recomputePop(true); Audio2.voice('park_intro'); };
+  park.enter = function () { park.drag = null; park.trayScroll = 0; park.trayMax = 0; park._active = null; park.trayDrag = null; ensureBase(); recomputePop(true); Audio2.voice('park_intro'); };
+
+  // 乐园核心：新乐园自带一顶免费帐篷作为「家/大本营」（不能拆，可移动）
+  function ensureBase() {
+    if (G.save.placed.some(p => p.base)) return;
+    const gT = groundTop(), tT = trayTop();
+    G.save.placed.unshift({ id: G.save.placeSeq++, item: 'tent', base: true, x: G.W * 0.5, y: (gT + tT) * 0.5 + (tT - gT) * 0.1 });
+    Eng.persist();
+  }
 
   function trayItems() { return Object.keys(DATA.ITEMS).filter(id => (G.save.built[id] || 0) > 0); }
   function groundTop() { return Math.max(46, G.H * 0.075) + 10 + G.H * 0.08; }   // topbar + 访客条
   function trayTop() { return G.H - G.H * 0.18; }
   function baseS() { return G.H * 0.135; }                                       // scale=1 的基准像素
   function dispS(item) { const it = DATA.ITEMS[item]; return baseS() * (it && it.scale ? it.scale : 1); }
+  function dsp(p) { return dispS(p.item) * (p.base ? 1.35 : 1); }                 // 含基础帐篷放大
   function surfaceTopY(p) { return p.y - dispS(p.item) * 0.16; }                  // 台面顶部 y
   function childrenOf(id) { return G.save.placed.filter(c => c.onId === id); }
 
@@ -156,7 +165,7 @@
   // 找最上层命中的已摆放物品（小物/子物优先）
   function pickPlaced(x, y) {
     const list = G.save.placed.slice().sort((a, b) => (b.onId ? 1 : 0) - (a.onId ? 1 : 0) || b.y - a.y);
-    for (const p of list) { const s = dispS(p.item) * 0.45; if (Math.abs(x - p.x) < s && Math.abs(y - p.y) < s) return p; }
+    for (const p of list) { const s = dsp(p) * 0.45; if (Math.abs(x - p.x) < s && Math.abs(y - p.y) < s) return p; }
     return null;
   }
   // 找 (x,y) 下方可叠放的台面物品（排除自己）
@@ -222,7 +231,11 @@
       }
     } else if (dr.kind === 'placed') {
       const p = dr.p;
-      if (onTrash || onTray) {                          // 删除/收回该物品(退回库存)，子物落到地面
+      if (p.base && (onTrash || onTray)) {              // 基础帐篷不能拆，弹回草地
+        const gT2 = groundTop(), tT2 = trayTop();
+        p.y = Math.max(gT2 + 40, Math.min(tT2 - 30, p.y));
+        Audio2.sfx('bad'); Eng.floatText(G.W / 2, gT2 + 60, '🏕️ 帐篷是乐园的家，拆不掉哦~', '#e67e22'); Eng.persist();
+      } else if (onTrash || onTray) {                   // 删除/收回该物品(退回库存)，子物落到地面
         childrenOf(p.id).forEach(c => { c.onId = null; });
         G.save.built[p.item] = (G.save.built[p.item] || 0) + 1;
         G.save.placed = G.save.placed.filter(o => o !== p);
@@ -271,11 +284,23 @@
     const order = [];
     roots.forEach(r => { order.push(r); childrenOf(r.id).sort((a, b) => a.x - b.x).forEach(c => order.push(c)); });
     order.forEach(p => {
-      const ds = dispS(p.item), dragging = park.drag && park.drag.kind === 'placed' && park.drag.p === p;
+      const ds = dsp(p), dragging = park.drag && park.drag.kind === 'placed' && park.drag.p === p;
+      // 基础帐篷：脚下画营地 + 小招牌「家」
+      if (p.base) {
+        ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.62, ds * 0.22, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = 'rgba(214,189,140,.55)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.5, ds * 0.17, 0, 0, 7); ctx.fill();
+      }
       if (!p.onId) { ctx.fillStyle = 'rgba(0,0,0,' + (dragging ? .22 : .14) + ')'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.4, ds * 0.32, ds * 0.12, 0, 0, 7); ctx.fill(); }
       if (dragging) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.32)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 8; }
       Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1));
       if (dragging) ctx.restore();
+      if (p.base) {                                      // 小招牌
+        ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2;
+        const lw = ds * 0.5, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5;
+        rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.7) + 'px "PingFang SC",sans-serif';
+        ctx.fillText('🏕️ 我的家', p.x, ly + lh / 2);
+      }
     });
     // 拖小物时高亮可叠放的台面
     if (park.drag && DATA.ITEMS[park.drag.item].onTop) {
@@ -286,8 +311,8 @@
     // 顶部访客/人气条
     drawVisitorBar(ctx);
 
-    // 删除区（拖动已摆放物时出现）
-    if (park.drag && park.drag.kind === 'placed') {
+    // 删除区（拖动已摆放物时出现；基础帐篷不可删，不显示）
+    if (park.drag && park.drag.kind === 'placed' && !park.drag.p.base) {
       const tz = trashZone(), hot = park.drag.x > tz.x && park.drag.x < tz.x + tz.w && park.drag.y > tz.y - 10 && park.drag.y < tz.y + tz.h + 10;
       rr(ctx, tz.x, tz.y, tz.w, tz.h, tz.h * 0.4); ctx.fillStyle = hot ? 'rgba(231,76,60,.96)' : 'rgba(231,76,60,.72)'; ctx.fill();
       ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.setLineDash(hot ? [] : [7, 5]); ctx.stroke(); ctx.setLineDash([]);
