@@ -1,13 +1,18 @@
-本目录中的垃圾图标（t_*.png）来自 OpenMoji —— 开源表情与图标项目。
-Trash icons (t_*.png) in this folder are from OpenMoji – the open-source emoji and icon project.
+本目录中的图标（t_*.png 垃圾 / i_*.png 物品 / v_*.png 访客 / m_*.png 材料）
+来自 OpenMoji —— 开源表情与图标项目。
+Icons in this folder are from OpenMoji – the open-source emoji and icon project.
 
 许可 / License: CC BY-SA 4.0  (https://creativecommons.org/licenses/by-sa/4.0/)
 项目主页 / Project: https://openmoji.org/
 
-使用的图标（key = OpenMoji 码点）：
-t_bottle=1F9F4  t_bag=1F6CD  t_cup=1F964  t_can=1F96B  t_tin=1FAD9
-t_glass=1F37E   t_news=1F4F0 t_box=1F4E6  t_driftwood=1FAB5  t_plank=1FAB5
-t_tire=1F6DE    t_banana=1F34C t_apple=1F34E t_fishbone=1F9B4 t_battery=1F50B
-t_bulb=1F4A1    t_foam=1F9FD t_boot=1F97E
+垃圾 trash:  t_bottle=1F9F4 t_bag=1F6CD t_cup=1F964 t_can=1F96B t_tin=1FAD9
+  t_glass=1F37E t_news=1F4F0 t_box=1F4E6 t_driftwood=1FAB5 t_plank=1FAB5
+  t_tire=1F6DE t_banana=1F34C t_apple=1F34E t_fishbone=1F9B4 t_battery=1F50B
+  t_bulb=1F4A1 t_foam=1F9FD t_boot=1F97E
+物品 items:  i_stool=1FA91 i_cupware=1F95B i_planter=1FAB4 i_flowers=1F490
+  i_tree=1F333 i_slide=1F6DD i_bike=1F6B2 i_tent=26FA
+访客 visitors: v_cat=1F431 v_bunny=1F430 v_bird=1F426 v_bear=1F43B v_kid=1F9D2 v_fox=1F98A
+材料 materials: m_wood=1FAB5 m_plastic=267B m_metal=1F529 m_glass=1FA9F m_paper=1F4C4 m_rubber=1F6DE
 
-其余美术（鱼/水母/海洋环境/可造物品/访客/材料/UI）为本项目程序化绘制。
+其余美术（鱼/水母/海洋环境/路灯/长椅/桌子/跷跷板/秋千/露营椅/风车/UI）
+为本项目程序化绘制（js/sprites.js + js/marine.js）。

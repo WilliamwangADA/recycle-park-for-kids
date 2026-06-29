@@ -84,11 +84,18 @@
       craft.buttons.push(b); btn(ctx, b);
     });
     const rows = Math.ceil(items.length / cols);
-    craftMaxScroll = Math.max(0, startY + rows * (ch + gap) + G.H * 0.14 - G.H);
+    const bh = G.H * 0.09;
+    craftMaxScroll = Math.max(0, startY + rows * (ch + gap) + bh + 30 - G.H);  // 给底部固定栏留出滚动余量
     ctx.restore();
 
+    // 底部固定栏遮罩（让卡片滚到此处被柔和遮住，固定 CTA 看起来是工具栏）
+    const barY = G.H - bh - 26;
+    const bgr = ctx.createLinearGradient(0, barY, 0, G.H);
+    bgr.addColorStop(0, 'rgba(255,217,176,0)'); bgr.addColorStop(0.45, '#ffd9b0'); bgr.addColorStop(1, '#ffcf9f');
+    ctx.fillStyle = bgr; ctx.fillRect(0, barY, G.W, G.H - barY);
+
     // 去布置按钮（固定底部）
-    const bw = Math.min(G.W * 0.5, 320), bh = G.H * 0.09;
+    const bw = Math.min(G.W * 0.5, 320);
     const goP = { x: (G.W - bw) / 2, y: G.H - bh - 10, w: bw, h: bh, label: '🏡 去布置乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.go('park') };
     craft.buttons.push(goP); btn(ctx, goP);
     // 返回：回到来时的场景（大海/乐园/菜单）
