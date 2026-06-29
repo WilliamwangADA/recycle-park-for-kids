@@ -94,10 +94,11 @@
     bgr.addColorStop(0, 'rgba(255,217,176,0)'); bgr.addColorStop(0.45, '#ffd9b0'); bgr.addColorStop(1, '#ffcf9f');
     ctx.fillStyle = bgr; ctx.fillRect(0, barY, G.W, G.H - barY);
 
-    // 去布置按钮（固定底部）
-    const bw = Math.min(G.W * 0.5, 320);
-    const goP = { x: (G.W - bw) / 2, y: G.H - bh - 10, w: bw, h: bh, label: '🏡 去布置乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.go('park') };
-    craft.buttons.push(goP); btn(ctx, goP);
+    // 底部固定栏：去大海收集 / 去布置乐园（两个直达入口，避免被困）
+    const ngap = 12, bw = Math.min(G.W * 0.4, 300), sx = (G.W - (bw * 2 + ngap)) / 2, byb = G.H - bh - 10;
+    const goO = { x: sx, y: byb, w: bw, h: bh, label: '🌊 去大海', color: '#2e86de', fs: Math.round(bh * 0.34), onTap: () => Eng.go('ocean', DATA.LEVELS[0]) };
+    const goP = { x: sx + bw + ngap, y: byb, w: bw, h: bh, label: '🏡 去布置乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.go('park') };
+    craft.buttons.push(goO, goP); btn(ctx, goO); btn(ctx, goP);
     // 返回：回到来时的场景（大海/乐园/菜单）
     const rt = G.returnTo || 'menu';
     const lbl = rt === 'ocean' ? '◀ 回大海' : (rt === 'park' ? '◀ 回乐园' : '◀');
@@ -250,17 +251,19 @@
       ctx.fillText('把下面的东西拖到草地上摆好看～ 越漂亮来的小伙伴越多!', G.W / 2, tT - G.H * 0.02);
     }
 
-    // 顶部按钮：造东西 / 返回
-    const bw = Math.min(G.W * 0.32, 200), bh = Math.max(40, G.H * 0.07);
-    const cb = { x: G.W - bw - 12, y: 12, w: bw, h: bh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(bh * 0.32), onTap: () => Eng.openCraft() };
-    park.buttons.push(cb); btn(ctx, cb);
+    // 顶部按钮：去大海收集 / 造东西 / 返回（互相直达，避免被困）
+    const bw = Math.min(G.W * 0.2, 156), bh = Math.max(40, G.H * 0.07);
+    const ob = { x: G.W - bw * 2 - 22, y: 12, w: bw, h: bh, label: '🌊 去大海', color: '#2e86de', fs: Math.round(bh * 0.3), onTap: () => Eng.go('ocean', DATA.LEVELS[0]) };
+    const cb = { x: G.W - bw - 12, y: 12, w: bw, h: bh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(bh * 0.3), onTap: () => Eng.openCraft() };
+    park.buttons.push(ob, cb); btn(ctx, ob); btn(ctx, cb);
     topNav(park, ctx);
   };
 
+  function VISBAR_RIGHT() { return Math.min(G.W * 0.2, 156) * 2 + 34; }
   function drawVisitorBar(ctx) {
     const s = Math.max(46, G.H * 0.075), pad = 10, y = 12, h = G.H * 0.075;
     const bx = pad + s + 60;   // 给左上返回键让位
-    const bw = G.W - bx - (Math.min(G.W * 0.32, 200) + 24);
+    const bw = G.W - bx - VISBAR_RIGHT();
     rr(ctx, bx, y, Math.max(120, bw), h, 14); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
     ctx.font = 'bold ' + Math.round(h * 0.42) + 'px "PingFang SC",sans-serif';

@@ -52,7 +52,7 @@
     ctx.fillText('更多地方马上就来啦～', G.W / 2, sy + ih + G.H * 0.03);
 
     const fbw = Math.min(G.W * 0.42, 280), fbh = G.H * 0.1, fy = G.H * 0.84;
-    const c = { x: G.W / 2 - fbw - 8, y: fy, w: fbw, h: fbh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(fbh * 0.32), onTap: () => Eng.go('craft') };
+    const c = { x: G.W / 2 - fbw - 8, y: fy, w: fbw, h: fbh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(fbh * 0.32), onTap: () => Eng.openCraft() };
     const p = { x: G.W / 2 + 8, y: fy, w: fbw, h: fbh, label: '🏡 我的乐园', color: '#27ae60', fs: Math.round(fbh * 0.32), onTap: () => Eng.go('park') };
     menu.buttons.push(c, p); btn(ctx, c); btn(ctx, p);
     muteBtn(menu, ctx);
