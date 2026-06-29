@@ -17,7 +17,8 @@ window.Game = (function () {
       bag: {},               // 捡到未分类的垃圾 {trashId: count}
       mats: {},              // 材料 {matId: count}
       built: {},             // 已造物品 {itemId: count}
-      placed: [],            // 乐园里摆放 [{item, x, y}]
+      placed: [],            // 乐园里摆放 [{id, item, x, y, onId?}]
+      placeSeq: 1,           // 摆放项唯一 id 自增
       stars: 0,              // 分类星星（货币之一，给造物提示用）
       popularity: 0,         // 人气
       visitors: {},          // 已吸引来的访客
@@ -30,6 +31,10 @@ window.Game = (function () {
     // 补字段（向后兼容）
     const d = defaultSave();
     for (const k in d) if (G.save[k] == null) G.save[k] = d[k];
+    // 给旧存档的摆放项补 id
+    let mx = 0;
+    G.save.placed.forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
+    if (G.save.placeSeq <= mx) G.save.placeSeq = mx + 1;
   }
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.save)); } catch (e) {} }
   function resetSave() { G.save = defaultSave(); persist(); }
@@ -195,6 +200,7 @@ window.Game = (function () {
     const c = G.canvas;
     c.addEventListener('mousedown', onDown); c.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
     c.addEventListener('touchstart', onDown, { passive: false }); c.addEventListener('touchmove', onMove, { passive: false }); c.addEventListener('touchend', onUp);
+    c.addEventListener('wheel', e => { if (G.scene && G.scene.wheel) { e.preventDefault(); G.scene.wheel(e.deltaY); } }, { passive: false });
     go('menu');
     requestAnimationFrame(t => { G.last = t; requestAnimationFrame(frame); });
   }

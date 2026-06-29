@@ -37,6 +37,7 @@
   };
   let craftMaxScroll = 0;
   function clampScroll(v) { return Math.max(-craftMaxScroll, Math.min(0, v)); }
+  craft.wheel = function (dy) { craft.scrollY = clampScroll(craft.scrollY - dy); };
   craft.draw = function (ctx) {
     craft.buttons = [];
     Eng.bg(ctx, '#fff3d6', '#ffd9b0');
@@ -88,6 +89,17 @@
     craftMaxScroll = Math.max(0, startY + rows * (ch + gap) + bh + 30 - G.H);  // 给底部固定栏留出滚动余量
     ctx.restore();
 
+    // 滚动条 + 下滑提示
+    if (craftMaxScroll > 4) {
+      const trackY = top + 10, trackH = G.H - top - bh - 50, tx = G.W - 8;
+      ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.strokeStyle = 'rgba(180,140,90,.22)';
+      ctx.beginPath(); ctx.moveTo(tx, trackY); ctx.lineTo(tx, trackY + trackH); ctx.stroke();
+      const frac = -craft.scrollY / craftMaxScroll, thumbH = Math.max(40, trackH * 0.35);
+      const thy = trackY + frac * (trackH - thumbH);
+      ctx.strokeStyle = '#e6913a'; ctx.beginPath(); ctx.moveTo(tx, thy); ctx.lineTo(tx, thy + thumbH); ctx.stroke();
+      if (frac < 0.85) { ctx.fillStyle = 'rgba(230,126,34,.8)'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(G.H * 0.026) + 'px "PingFang SC",sans-serif'; ctx.fillText('↓ 下滑看更多 ↓', G.W / 2, G.H - bh - 40); }
+    }
+
     // 底部固定栏遮罩（让卡片滚到此处被柔和遮住，固定 CTA 看起来是工具栏）
     const barY = G.H - bh - 26;
     const bgr = ctx.createLinearGradient(0, barY, 0, G.H);
@@ -119,11 +131,15 @@
      场景：装饰乐园（摆放类）
      ======================================================================= */
   const park = {};
-  park.enter = function () { park.drag = null; park.trayScroll = 0; park._active = null; recomputePop(true); Audio2.voice('park_intro'); };
+  park.enter = function () { park.drag = null; park.trayScroll = 0; park.trayMax = 0; park._active = null; park.trayDrag = null; recomputePop(true); Audio2.voice('park_intro'); };
 
   function trayItems() { return Object.keys(DATA.ITEMS).filter(id => (G.save.built[id] || 0) > 0); }
   function groundTop() { return Math.max(46, G.H * 0.075) + 10 + G.H * 0.08; }   // topbar + 访客条
   function trayTop() { return G.H - G.H * 0.18; }
+  function baseS() { return G.H * 0.135; }                                       // scale=1 的基准像素
+  function dispS(item) { const it = DATA.ITEMS[item]; return baseS() * (it && it.scale ? it.scale : 1); }
+  function surfaceTopY(p) { return p.y - dispS(p.item) * 0.16; }                  // 台面顶部 y
+  function childrenOf(id) { return G.save.placed.filter(c => c.onId === id); }
 
   function recomputePop(silent) {
     let pop = 0; G.save.placed.forEach(p => { pop += (DATA.ITEMS[p.item] ? DATA.ITEMS[p.item].charm : 0); });
@@ -137,49 +153,84 @@
     Eng.persist();
   }
 
+  // 找最上层命中的已摆放物品（小物/子物优先）
+  function pickPlaced(x, y) {
+    const list = G.save.placed.slice().sort((a, b) => (b.onId ? 1 : 0) - (a.onId ? 1 : 0) || b.y - a.y);
+    for (const p of list) { const s = dispS(p.item) * 0.45; if (Math.abs(x - p.x) < s && Math.abs(y - p.y) < s) return p; }
+    return null;
+  }
+  // 找 (x,y) 下方可叠放的台面物品（排除自己）
+  function surfaceAt(x, y, self) {
+    let best = null;
+    G.save.placed.forEach(p => {
+      if (p === self || !DATA.ITEMS[p.item].surface) return;
+      const w = dispS(p.item) * 0.5, ty = surfaceTopY(p);
+      if (Math.abs(x - p.x) < w && y > ty - dispS(p.item) * 0.4 && y < p.y + dispS(p.item) * 0.2) { if (!best || p.y > best.y) best = p; }
+    });
+    return best;
+  }
+  function trashZone() { const r = Math.max(44, G.H * 0.07); return { x: G.W / 2 - r * 1.6, y: groundTop() + 6, w: r * 3.2, h: r, r }; }
+
+  park.wheel = function (dy) { park.trayScroll = Math.min(0, Math.max(-park.trayMax, park.trayScroll - dy)); };
+
   park.down = function (x, y) {
-    park._active = null;
+    park._active = null; park.trayDrag = null;
     for (const b of (park.buttons || [])) if (hit(b, x, y)) { b.pressed = true; park._active = b; return; }
-    // 1) 抓取已摆放的物品（从上层往下找）
     const gT = groundTop(), tT = trayTop();
+    // 1) 抓取已摆放的物品
     if (y > gT && y < tT) {
-      for (let i = G.save.placed.length - 1; i >= 0; i--) {
-        const p = G.save.placed[i], s = G.H * 0.12;
-        if (Math.abs(x - p.x) < s * 0.5 && Math.abs(y - p.y) < s * 0.5) {
-          park.drag = { kind: 'placed', idx: i, item: p.item, x, y }; return;
-        }
-      }
+      const p = pickPlaced(x, y);
+      if (p) { park.drag = { kind: 'placed', p, item: p.item, dx: x - p.x, dy: y - p.y, x, y }; Audio2.sfx('pop'); return; }
     }
-    // 2) 从托盘抓新物品
-    const tr = trayLayout();
-    for (const t of tr) if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) {
-      if ((G.save.built[t.id] || 0) > 0) { park.drag = { kind: 'tray', item: t.id, x, y }; }
-      return;
+    // 2) 托盘：点物品=取新物；点空白=横向滚动托盘
+    if (y >= tT) {
+      const tr = trayLayout();
+      for (const t of tr) if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) {
+        if ((G.save.built[t.id] || 0) > 0) park.drag = { kind: 'tray', item: t.id, x, y };
+        return;
+      }
+      park.trayDrag = { sx: x, base: park.trayScroll };
     }
   };
-  park.move = function (x, y) { if (park.drag) { park.drag.x = x; park.drag.y = y; } };
+  park.move = function (x, y) {
+    if (park.trayDrag) { park.trayScroll = Math.min(0, Math.max(-park.trayMax, park.trayDrag.base + (x - park.trayDrag.sx))); return; }
+    if (!park.drag) return;
+    park.drag.x = x; park.drag.y = y;
+    if (park.drag.kind === 'placed') {                 // 实时移动，子物跟随
+      const p = park.drag.p, gT = groundTop(), tT = trayTop();
+      p.x = Math.max(30, Math.min(G.W - 30, x - park.drag.dx));
+      p.y = Math.max(gT + 30, Math.min(tT - 20, y - park.drag.dy));
+    }
+  };
   park.up = function (x, y) {
     const a = park._active; (park.buttons || []).forEach(b => b.pressed = false);
-    if (a && hit(a, x, y) && a.onTap) { Audio2.sfx('click'); a.onTap(); park._active = null; park.drag = null; return; }
-    park._active = null;
+    if (a && hit(a, x, y) && a.onTap) { Audio2.sfx('click'); a.onTap(); park._active = null; park.drag = null; park.trayDrag = null; return; }
+    park._active = null; park.trayDrag = null;
     const dr = park.drag; park.drag = null; if (!dr) return;
-    const gT = groundTop(), tT = trayTop();
-    const onGround = y > gT && y < tT;
-    const onTray = y >= tT;
+    const gT = groundTop(), tT = trayTop(), onGround = y > gT && y < tT, onTray = y >= tT;
+    const tz = trashZone(), onTrash = x > tz.x && x < tz.x + tz.w && y > tz.y - 10 && y < tz.y + tz.h + 10;
+
     if (dr.kind === 'tray') {
       if (onGround) {
+        const it = DATA.ITEMS[dr.item];
+        const px = Math.max(30, Math.min(G.W - 30, x)), py = Math.max(gT + 30, Math.min(tT - 20, y));
+        const entry = { id: G.save.placeSeq++, item: dr.item, x: px, y: py };
+        if (it.onTop) { const surf = surfaceAt(x, y, null); if (surf) { entry.onId = surf.id; entry.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, x - surf.x)); } }
         G.save.built[dr.item]--; if (G.save.built[dr.item] <= 0) delete G.save.built[dr.item];
-        G.save.placed.push({ item: dr.item, x: Math.max(40, Math.min(G.W - 40, x)), y: Math.max(gT + 30, Math.min(tT - 20, y)) });
-        Audio2.sfx('place'); Eng.burst(x, y, '#feca57', 8); recomputePop(false);
+        G.save.placed.push(entry);
+        Audio2.sfx(entry.onId ? 'good' : 'place'); Eng.burst(px, py, '#feca57', 8); recomputePop(false);
       }
     } else if (dr.kind === 'placed') {
-      const p = G.save.placed[dr.idx];
-      if (onTray) {                                   // 拖回托盘 = 收回（材料退回成品）
+      const p = dr.p;
+      if (onTrash || onTray) {                          // 删除/收回该物品(退回库存)，子物落到地面
+        childrenOf(p.id).forEach(c => { c.onId = null; });
         G.save.built[p.item] = (G.save.built[p.item] || 0) + 1;
-        G.save.placed.splice(dr.idx, 1); Audio2.sfx('pop'); recomputePop(false);
-      } else if (onGround) {
-        p.x = Math.max(40, Math.min(G.W - 40, x)); p.y = Math.max(gT + 30, Math.min(tT - 20, y));
-        Audio2.sfx('place'); Eng.persist();
+        G.save.placed = G.save.placed.filter(o => o !== p);
+        Audio2.sfx('pop'); Eng.floatText(x, y - 20, '收回了 ' + DATA.ITEMS[p.item].name, '#ff7675'); recomputePop(false);
+      } else if (onGround) {                            // 落下：小物可吸附到台面
+        p.onId = null; delete p.offx;
+        if (DATA.ITEMS[p.item].onTop) { const surf = surfaceAt(x, y, p); if (surf) { p.onId = surf.id; p.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, x - surf.x)); Audio2.sfx('good'); } }
+        Audio2.sfx('place'); Eng.persist(); recomputePop(true);
       }
     }
   };
@@ -187,6 +238,7 @@
   function trayLayout() {
     const ids = trayItems(); const tT = trayTop(), h = G.H * 0.18 - 8;
     const iw = h * 0.92, gap = 10, pad = 12;
+    park.trayMax = Math.max(0, pad * 2 + ids.length * (iw + gap) - G.W);
     return ids.map((id, i) => ({ id, x: pad + i * (iw + gap) + park.trayScroll, y: tT + 4, w: iw, h: h - 8 }));
   }
 
@@ -211,17 +263,37 @@
       Sprites.draw(ctx, v.sprite, x, y - Math.abs(Math.sin(G.t * 4 + i)) * 6, G.H * 0.1);
     });
 
-    // 已摆放物品（按 y 排序做前后遮挡）
-    const placed = G.save.placed.map((p, i) => ({ p, i })).sort((a, b) => a.p.y - b.p.y);
-    placed.forEach(({ p, i }) => {
-      if (park.drag && park.drag.kind === 'placed' && park.drag.idx === i) return;
-      // 影子
-      ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + G.H * 0.05, G.H * 0.05, G.H * 0.018, 0, 0, 7); ctx.fill();
-      Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y, G.H * 0.12);
+    // —— 已摆放物品：台面先画、小物叠其上；按 y 景深排序；按 scale 显示相对大小 ——
+    G.save.placed.forEach(c => {                       // 子物实时吸附到台面
+      if (c.onId) { const par = G.save.placed.find(p => p.id === c.onId); if (!par) c.onId = null; else { c.x = par.x + (c.offx || 0); c.y = surfaceTopY(par) - dispS(c.item) * 0.18; } }
     });
+    const roots = G.save.placed.filter(p => !p.onId).sort((a, b) => a.y - b.y);
+    const order = [];
+    roots.forEach(r => { order.push(r); childrenOf(r.id).sort((a, b) => a.x - b.x).forEach(c => order.push(c)); });
+    order.forEach(p => {
+      const ds = dispS(p.item), dragging = park.drag && park.drag.kind === 'placed' && park.drag.p === p;
+      if (!p.onId) { ctx.fillStyle = 'rgba(0,0,0,' + (dragging ? .22 : .14) + ')'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.4, ds * 0.32, ds * 0.12, 0, 0, 7); ctx.fill(); }
+      if (dragging) { ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.32)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 8; }
+      Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1));
+      if (dragging) ctx.restore();
+    });
+    // 拖小物时高亮可叠放的台面
+    if (park.drag && DATA.ITEMS[park.drag.item].onTop) {
+      const surf = surfaceAt(park.drag.x, park.drag.y, park.drag.kind === 'placed' ? park.drag.p : null);
+      if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w, surfaceTopY(surf) - 7, w * 2, 14); ctx.restore(); }
+    }
 
     // 顶部访客/人气条
     drawVisitorBar(ctx);
+
+    // 删除区（拖动已摆放物时出现）
+    if (park.drag && park.drag.kind === 'placed') {
+      const tz = trashZone(), hot = park.drag.x > tz.x && park.drag.x < tz.x + tz.w && park.drag.y > tz.y - 10 && park.drag.y < tz.y + tz.h + 10;
+      rr(ctx, tz.x, tz.y, tz.w, tz.h, tz.h * 0.4); ctx.fillStyle = hot ? 'rgba(231,76,60,.96)' : 'rgba(231,76,60,.72)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = '#fff'; ctx.setLineDash(hot ? [] : [7, 5]); ctx.stroke(); ctx.setLineDash([]);
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(tz.h * 0.36) + 'px "PingFang SC",sans-serif';
+      ctx.fillText('🗑 ' + (hot ? '松手删除!' : '拖到这里删除'), tz.x + tz.w / 2, tz.y + tz.h / 2);
+    }
 
     // 托盘背景
     rr(ctx, 6, tT, G.W - 12, G.H * 0.18 - 6, 16); ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.fill();
@@ -241,14 +313,21 @@
       });
     }
 
-    // 正在拖拽的物品
-    if (park.drag) Sprites.draw(ctx, DATA.ITEMS[park.drag.item].sprite, park.drag.x, park.drag.y, G.H * 0.14);
+    // 从托盘拖出的新物品 ghost（已摆放物已在上方实时绘制）
+    if (park.drag && park.drag.kind === 'tray') {
+      const ds = dispS(park.drag.item);
+      ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.32)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 8;
+      Sprites.draw(ctx, DATA.ITEMS[park.drag.item].sprite, park.drag.x, park.drag.y, ds * 1.05);
+      ctx.restore();
+    }
+    // 托盘可左右滑动提示
+    if (park.trayMax > 4 && !park.drag) { ctx.fillStyle = 'rgba(39,174,96,.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(G.H * 0.022) + 'px "PingFang SC",sans-serif'; ctx.fillText('← 左右滑动看更多 →', G.W / 2, tT + G.H * 0.005); }
 
     // 提示
     if (ids.length > 0 && !park.drag) {
       ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = 'bold ' + Math.round(G.H * 0.026) + 'px "PingFang SC",sans-serif';
-      ctx.fillText('把下面的东西拖到草地上摆好看～ 越漂亮来的小伙伴越多!', G.W / 2, tT - G.H * 0.02);
+      ctx.font = 'bold ' + Math.round(G.H * 0.025) + 'px "PingFang SC",sans-serif';
+      ctx.fillText('拖到草地摆放 · 杯子茶壶可放桌上 · 拖住已摆好的东西可移动或删除', G.W / 2, tT - G.H * 0.022);
     }
 
     // 顶部按钮：去大海收集 / 造东西 / 返回（互相直达，避免被困）

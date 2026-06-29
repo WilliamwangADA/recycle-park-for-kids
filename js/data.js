@@ -46,23 +46,39 @@ window.DATA = (function () {
     boot:     { name: '旧靴子', sprite: 't_boot',     bin: 'other',   yield: 'rubber' },
   };
 
-  /* ---- 可制造物品（配方=各原料数量；charm=摆进乐园加的人气）---- */
+  /* ---- 可制造物品 ----
+     cost=配方  charm=人气  scale=乐园里相对大小(杯小桌大)
+     surface=true 是台面(可叠放小物)  onTop=true 是小物(更适合放台面上) ---- */
   const ITEMS = {
-    stool:    { name: '小凳子', sprite: 'i_stool',    cost: { wood: 2 },                 charm: 2 },
-    table:    { name: '小桌子', sprite: 'i_table',    cost: { wood: 3, metal: 1 },       charm: 3 },
-    cupware:  { name: '小杯子', sprite: 'i_cupware',  cost: { glass: 2 },                charm: 2 },
-    planter:  { name: '花盆',   sprite: 'i_planter',  cost: { glass: 1, plastic: 1 },    charm: 3 },
-    flowers:  { name: '花丛',   sprite: 'i_flowers',  cost: { paper: 2 },                charm: 3 },
-    tree:     { name: '小树',   sprite: 'i_tree',     cost: { wood: 3 },                 charm: 4 },
-    bench:    { name: '长椅',   sprite: 'i_bench',    cost: { wood: 3, metal: 2 },       charm: 4 },
-    campchair:{ name: '露营椅', sprite: 'i_campchair',cost: { metal: 2, paper: 1 },      charm: 4 },
-    pinwheel: { name: '风车',   sprite: 'i_pinwheel', cost: { plastic: 1, paper: 1 },    charm: 3 },
-    lamp:     { name: '小路灯', sprite: 'i_lamp',     cost: { metal: 2, glass: 1 },      charm: 4 },
-    seesaw:   { name: '跷跷板', sprite: 'i_seesaw',   cost: { wood: 2, metal: 3 },       charm: 6 },
-    swing:    { name: '秋千',   sprite: 'i_swing',    cost: { metal: 3, rubber: 2 },     charm: 6 },
-    slide:    { name: '滑梯',   sprite: 'i_slide',    cost: { plastic: 4, metal: 2 },    charm: 8 },
-    bike:     { name: '自行车', sprite: 'i_bike',     cost: { metal: 4, rubber: 2 },     charm: 7 },
-    tent:     { name: '帐篷',   sprite: 'i_tent',     cost: { plastic: 2, paper: 3 },    charm: 7 },
+    // —— 小物 / 可放台面 ——
+    plate:    { name: '餐盘',   sprite: 'i_plate',    cost: { glass: 1 },                charm: 2, scale: 0.5,  onTop: true },
+    cupware:  { name: '小杯子', sprite: 'i_cupware',  cost: { glass: 2 },                charm: 2, scale: 0.5,  onTop: true },
+    teapot:   { name: '茶壶',   sprite: 'i_teapot',   cost: { metal: 1, glass: 1 },      charm: 3, scale: 0.6,  onTop: true },
+    // —— 家具(台面，可在上面叠放小物) ——
+    stool:    { name: '小凳子', sprite: 'i_stool',    cost: { wood: 2 },                 charm: 2, scale: 0.7,  surface: true },
+    table:    { name: '小桌子', sprite: 'i_table',    cost: { wood: 3, metal: 1 },       charm: 3, scale: 1.0,  surface: true },
+    bench:    { name: '长椅',   sprite: 'i_bench',    cost: { wood: 3, metal: 2 },       charm: 4, scale: 1.1,  surface: true },
+    campchair:{ name: '露营椅', sprite: 'i_campchair',cost: { metal: 2, paper: 1 },      charm: 4, scale: 0.9 },
+    // —— 装饰 ——
+    planter:  { name: '花盆',   sprite: 'i_planter',  cost: { glass: 1, plastic: 1 },    charm: 3, scale: 0.8 },
+    flowers:  { name: '花丛',   sprite: 'i_flowers',  cost: { paper: 2 },                charm: 3, scale: 0.85 },
+    pinwheel: { name: '风车',   sprite: 'i_pinwheel', cost: { plastic: 1, paper: 1 },    charm: 3, scale: 0.8 },
+    lamp:     { name: '小路灯', sprite: 'i_lamp',     cost: { metal: 2, glass: 1 },      charm: 4, scale: 1.15 },
+    mailbox:  { name: '小信箱', sprite: 'i_mailbox',  cost: { metal: 2, paper: 1 },      charm: 3, scale: 0.75 },
+    flag:     { name: '小旗',   sprite: 'i_flag',     cost: { paper: 1, wood: 1 },       charm: 2, scale: 1.0 },
+    balloon:  { name: '气球',   sprite: 'i_balloon',  cost: { rubber: 1, plastic: 1 },   charm: 3, scale: 0.95 },
+    kite:     { name: '风筝',   sprite: 'i_kite',     cost: { paper: 2, plastic: 1 },    charm: 4, scale: 0.95 },
+    umbrella: { name: '遮阳伞', sprite: 'i_umbrella', cost: { paper: 2, metal: 1 },      charm: 4, scale: 1.3 },
+    picnic:   { name: '野餐篮', sprite: 'i_picnic',   cost: { paper: 2, plastic: 1 },    charm: 3, scale: 0.8 },
+    statue:   { name: '小石像', sprite: 'i_statue',   cost: { glass: 2, metal: 2 },      charm: 5, scale: 1.1 },
+    // —— 大件 / 游乐 ——
+    tree:     { name: '小树',   sprite: 'i_tree',     cost: { wood: 3 },                 charm: 4, scale: 1.7 },
+    fountain: { name: '喷泉',   sprite: 'i_fountain', cost: { glass: 3, metal: 2 },      charm: 7, scale: 1.4 },
+    seesaw:   { name: '跷跷板', sprite: 'i_seesaw',   cost: { wood: 2, metal: 3 },       charm: 6, scale: 1.4 },
+    swing:    { name: '秋千',   sprite: 'i_swing',    cost: { metal: 3, rubber: 2 },     charm: 6, scale: 1.5 },
+    slide:    { name: '滑梯',   sprite: 'i_slide',    cost: { plastic: 4, metal: 2 },    charm: 8, scale: 1.6 },
+    bike:     { name: '自行车', sprite: 'i_bike',     cost: { metal: 4, rubber: 2 },     charm: 7, scale: 1.2 },
+    tent:     { name: '帐篷',   sprite: 'i_tent',     cost: { plastic: 2, paper: 3 },    charm: 7, scale: 1.55 },
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */
