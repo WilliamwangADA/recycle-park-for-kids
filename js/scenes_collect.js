@@ -60,15 +60,25 @@
 
   /* ============================ 大海 ============================ */
   const ocean = {}; btnLayer(ocean);
+  const FISH_COLORS = [
+    { body: ['#ff9ff3', '#e26fd0'], fin: '#f368e0' },
+    { body: ['#7ee0a8', '#3bb878'], fin: '#2fa869' },
+    { body: ['#ffd56b', '#f0a93a'], fin: '#e8902a' },
+    { body: ['#7fc7ff', '#3d8fe0'], fin: '#2f7fd0' },
+    { body: ['#ff8a8a', '#e85b5b'], fin: '#d94b4b' },
+  ];
   ocean.enter = function (lv) {
     ocean.lv = lv || DATA.LEVELS[0];
+    Marine.init(G.W, G.H);
     seabed();             // 海床装饰（固定）
     spawnTrash(16);
-    ocean.fish = []; for (let i = 0; i < 6; i++) ocean.fish.push(newFish());
-    ocean.plankton = []; for (let i = 0; i < 40; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.6, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
-    ocean.bubbles = []; ocean.drag = null; ocean.shakeT = 0;
+    ocean.fish = []; for (let i = 0; i < 7; i++) ocean.fish.push(newFish());
+    ocean.jellies = []; for (let i = 0; i < 2; i++) ocean.jellies.push({ x: Math.random() * G.W, y: waterTop() + 40 + Math.random() * 120, s: G.H * (0.07 + Math.random() * 0.03), vx: (Math.random() - .5) * 8, vy: -4 - Math.random() * 4, ph: Math.random() * 6.28 });
+    ocean.plankton = []; for (let i = 0; i < 46; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.8, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
+    ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
     Audio2.sfx('splash'); Audio2.voice('ocean_intro');
   };
+  ocean.resize = function () { Marine.init(G.W, G.H); seabed(); };
   function waterTop() { return Math.max(44, G.H * 0.072) + 10 + Math.max(40, G.H * 0.066) + 12; } // 计分牌 + 控制行
   function binH() { return G.H * 0.135; }
   function binsTop() { return G.H - binH() - 8; }
@@ -85,7 +95,7 @@
   function newFish() {
     const dir = Math.random() < .5 ? 1 : -1;
     return { x: Math.random() * G.W, y: waterTop() + 30 + Math.random() * (sandTop() - waterTop() - 60),
-      vx: dir * (24 + Math.random() * 26), vy: 0, sp: G.H * (0.07 + Math.random() * 0.03), kind: pick(['fish', 'fish2', 'fish3']), ph: Math.random() * 6.28, scared: 0 };
+      vx: dir * (24 + Math.random() * 26), vy: 0, sp: G.H * (0.085 + Math.random() * 0.04), col: pick(FISH_COLORS), ph: Math.random() * 6.28, scared: 0, happy: 0 };
   }
   function seabed() {
     const decals = ['coral', 'coral2', 'seaweed', 'rock', 'starfish', 'shell'];
@@ -114,6 +124,8 @@
     if (t.bin === r.bin.id) {
       Audio2.sfx('good'); G.save.stars++;
       Eng.burst(r.x + r.w / 2, r.y, r.bin.color, 14);
+      ocean.binAnim[r.bin.id] = 0.5;                                  // 开盖吞垃圾
+      ocean.ripples.push({ x: r.x + r.w / 2, y: r.y, age: 0, max: 0.6, col: r.bin.color });
       ocean.items = ocean.items.filter(o => o !== d.it);
       if (t.yield) { Eng.addMat(t.yield, 1); Eng.floatText(r.x + r.w / 2, r.y - 12, '+1 ' + DATA.MATERIALS[t.yield].name, DATA.MATERIALS[t.yield].color); Audio2.voice('got_mat'); }
       else { Eng.floatText(r.x + r.w / 2, r.y - 12, '处理好啦!', '#fff'); Audio2.voice('right'); }
@@ -151,50 +163,82 @@
       if (f.x < -60) { f.x = G.W + 60; } if (f.x > G.W + 60) { f.x = -60; }
       if (f.happy) f.happy = Math.max(0, f.happy - dt);
     });
+    // 水母漂浮
+    const top2 = waterTop() + 10;
+    ocean.jellies.forEach(j => { j.ph += dt; j.x += j.vx * dt; j.y += j.vy * dt; if (j.y < top2) j.vy = Math.abs(j.vy); if (j.y > sandTop() - 60) j.vy = -Math.abs(j.vy); if (j.x < -40) j.x = G.W + 40; if (j.x > G.W + 40) j.x = -40; });
     // 浮游 + 气泡
     ocean.plankton.forEach(p => { p.y += p.vy * dt; p.x += Math.sin(p.ph += dt) * 6 * dt; if (p.y < waterTop()) { p.y = G.H; p.x = Math.random() * G.W; } });
-    if (Math.random() < dt * 3) ocean.bubbles.push({ x: Math.random() * G.W, y: G.H, vy: -28 - Math.random() * 34, r: 3 + Math.random() * 6, age: 0 });
-    for (let i = ocean.bubbles.length - 1; i >= 0; i--) { const b = ocean.bubbles[i]; b.y += b.vy * dt; b.age += dt; if (b.age > 3) ocean.bubbles.splice(i, 1); }
+    if (Math.random() < dt * 3) ocean.bubbles.push({ x: Math.random() * G.W, y: G.H, vy: -28 - Math.random() * 34, r: 3 + Math.random() * 6, age: 0, wob: Math.random() * 6.28 });
+    // 拖拽时垃圾尾随气泡
+    if (ocean.drag && (ocean.trailT -= dt) <= 0) { ocean.trailT = 0.09; ocean.bubbles.push({ x: ocean.drag.it.x + (Math.random() - .5) * 20, y: ocean.drag.it.y, vy: -40 - Math.random() * 30, r: 2 + Math.random() * 4, age: 0, wob: Math.random() * 6.28 }); }
+    for (let i = ocean.bubbles.length - 1; i >= 0; i--) { const b = ocean.bubbles[i]; b.y += b.vy * dt; b.x += Math.sin((b.wob += dt * 4)) * 8 * dt; b.age += dt; if (b.age > 3) ocean.bubbles.splice(i, 1); }
+    // 涟漪 + 分类箱开盖动画
+    for (let i = ocean.ripples.length - 1; i >= 0; i--) { ocean.ripples[i].age += dt; if (ocean.ripples[i].age > ocean.ripples[i].max) ocean.ripples.splice(i, 1); }
+    for (const k in ocean.binAnim) { ocean.binAnim[k] -= dt; if (ocean.binAnim[k] <= 0) delete ocean.binAnim[k]; }
   };
 
   ocean.draw = function (ctx) {
     ocean.buttons = [];
-    const sh = ocean.shakeT > 0 ? Math.sin(ocean.shakeT * 60) * 5 : 0;
-    // 水体渐变
+    const t = G.t, sh = ocean.shakeT > 0 ? Math.sin(ocean.shakeT * 60) * 5 : 0;
+    // 水体渐变（更通透的层次）
     const wg = ctx.createLinearGradient(0, 0, 0, G.H);
-    wg.addColorStop(0, '#3fb0dd'); wg.addColorStop(0.5, '#1f7fb5'); wg.addColorStop(1, '#0c4f78');
+    wg.addColorStop(0, '#56c2e8'); wg.addColorStop(0.35, '#2a93c8'); wg.addColorStop(0.7, '#15709f'); wg.addColorStop(1, '#083f63');
     ctx.fillStyle = wg; ctx.fillRect(0, 0, G.W, G.H);
-    // 远景珊瑚剪影（视差）
-    ctx.fillStyle = 'rgba(8,60,95,.45)';
-    for (let i = 0; i < 6; i++) { const x = (i + 0.5) / 6 * G.W; ctx.beginPath(); ctx.moveTo(x - 40, sandTop()); ctx.quadraticCurveTo(x, sandTop() - G.H * 0.16, x + 40, sandTop()); ctx.fill(); }
-    // 光柱
-    ctx.save(); ctx.globalAlpha = 0.1; ctx.fillStyle = '#dffbff';
-    for (let i = 0; i < 4; i++) { const x = G.W * (0.1 + i * 0.26) + Math.sin(G.t * 0.3 + i) * 18; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 55, 0); ctx.lineTo(x + 150, G.H); ctx.lineTo(x + 80, G.H); ctx.closePath(); ctx.fill(); } ctx.restore();
-    // 海床沙地
-    const sg = ctx.createLinearGradient(0, sandTop(), 0, G.H); sg.addColorStop(0, '#f2e2b0'); sg.addColorStop(1, '#d9c084');
+    // 流动光柱（叠加发光）
+    Marine.rays(ctx, G.W, G.H, t);
+    // 远景珊瑚剪影（视差，柔化）
+    ctx.save(); ctx.globalAlpha = 0.5; ctx.fillStyle = '#0a4a72';
+    for (let i = 0; i < 6; i++) { const x = (i + 0.5) / 6 * G.W + Math.sin(t * 0.15 + i) * 8; ctx.beginPath(); ctx.moveTo(x - 46, sandTop()); ctx.quadraticCurveTo(x, sandTop() - G.H * 0.18, x + 46, sandTop()); ctx.fill(); } ctx.restore();
+    // 海床沙地（带光影）
+    const sg = ctx.createLinearGradient(0, sandTop(), 0, G.H); sg.addColorStop(0, '#f6e7b6'); sg.addColorStop(1, '#d2b677');
     ctx.fillStyle = sg; ctx.beginPath(); ctx.moveTo(0, sandTop() + 6); for (let x = 0; x <= G.W; x += 40) ctx.lineTo(x, sandTop() + Math.sin(x * 0.05 + 1) * 5); ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
+    // 海床焦散光斑
+    ctx.save(); ctx.beginPath(); ctx.rect(0, sandTop(), G.W, G.H - sandTop()); ctx.clip(); Marine.caustics(ctx, G.W, G.H, t, 0.5, 'lighter'); ctx.restore();
     // 海床装饰
-    ocean.decor.forEach(d => { Sprites.draw(ctx, d.k, d.x, sandTop() + 4 - d.s * 0.32, d.s, { rot: Math.sin(G.t * 0.6 + d.ph) * 0.04 }); });
+    ocean.decor.forEach(d => { Sprites.draw(ctx, d.k, d.x, sandTop() + 4 - d.s * 0.32, d.s, { rot: Math.sin(t * 0.6 + d.ph) * 0.05 }); });
+    // 水母（在鱼之后更靠前？这里放中景）
+    ocean.jellies.forEach(j => Marine.jelly(ctx, j.x, j.y, j.s, t, j.ph));
     // 浮游粒子
-    ctx.fillStyle = 'rgba(255,255,255,.35)'; ocean.plankton.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); });
-    // 小鱼
-    ocean.fish.forEach(f => { ctx.save(); ctx.translate(f.x, f.y + Math.sin(f.ph * 2) * 4); const flip = f.vx < 0 ? -1 : 1; ctx.scale(flip, 1); const tilt = Math.max(-0.3, Math.min(0.3, f.vy * 0.01)); ctx.rotate(tilt * flip); Sprites.draw(ctx, f.kind, 0, 0, f.sp * (f.scared > 0.3 ? 1.05 : 1)); ctx.restore();
-      if (f.scared > 0.5) { ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.font = 'bold ' + Math.round(f.sp * 0.5) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', f.x + (f.vx < 0 ? 14 : -14), f.y - f.sp * 0.55); } });
-    // 气泡
-    ctx.fillStyle = 'rgba(255,255,255,.3)'; ocean.bubbles.forEach(b => { ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fill(); });
-    // 垃圾
-    ocean.items.forEach(it => { const drag = ocean.drag && ocean.drag.it === it; Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, it.y + (drag ? 0 : Math.sin(it.ph) * 4), it.s * (drag ? 1.18 : 1), { rot: it.ang }); });
-    // 拖拽时画抄网在垃圾下
-    if (ocean.drag) Sprites.draw(ctx, 'net', ocean.drag.it.x, ocean.drag.it.y + ocean.drag.it.s * 0.5, ocean.drag.it.s * 1.2, { alpha: 0.9 });
+    ctx.fillStyle = 'rgba(230,250,255,.4)'; ocean.plankton.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); });
+    // 小鱼（程序化摆尾游动）
+    ocean.fish.forEach(f => {
+      const flip = f.vx < 0 ? -1 : 1, tilt = Math.max(-0.3, Math.min(0.3, f.vy * 0.012));
+      ctx.save(); ctx.translate(f.x, f.y); ctx.scale(flip, 1);
+      Marine.fish(ctx, 0, 0, f.sp * (f.scared > 0.3 ? 1.06 : 1), t, f.ph, { scared: f.scared > 0.4, tilt: tilt * flip, body: f.col.body, fin: f.col.fin });
+      ctx.restore();
+      if (f.scared > 0.5) { ctx.fillStyle = '#fff5b0'; ctx.font = 'bold ' + Math.round(f.sp * 0.55) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('!', f.x + (f.vx < 0 ? 16 : -16), f.y - f.sp * 0.6); }
+    });
+    // 气泡（带高光）
+    ocean.bubbles.forEach(b => { const a = 0.35 * (1 - b.age / 3); ctx.beginPath(); ctx.arc(b.x, b.y, b.r, 0, 7); ctx.fillStyle = 'rgba(220,245,255,' + a + ')'; ctx.fill(); ctx.lineWidth = 1; ctx.strokeStyle = 'rgba(255,255,255,' + (a + 0.15) + ')'; ctx.stroke(); ctx.beginPath(); ctx.arc(b.x - b.r * 0.3, b.y - b.r * 0.3, b.r * 0.3, 0, 7); ctx.fillStyle = 'rgba(255,255,255,' + (a + 0.25) + ')'; ctx.fill(); });
+    // 垃圾（拖拽放大 + 光晕）
+    ocean.items.forEach(it => {
+      const drag = ocean.drag && ocean.drag.it === it;
+      if (drag) { ctx.save(); ctx.shadowColor = 'rgba(255,255,180,.9)'; ctx.shadowBlur = 22; }
+      Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, it.y + (drag ? 0 : Math.sin(it.ph) * 4), it.s * (drag ? 1.2 : 1), { rot: drag ? Math.sin(t * 8) * 0.08 : it.ang });
+      if (drag) ctx.restore();
+    });
+    // 拖拽：抄网
+    if (ocean.drag) Sprites.draw(ctx, 'net', ocean.drag.it.x, ocean.drag.it.y + ocean.drag.it.s * 0.5, ocean.drag.it.s * 1.25, { alpha: 0.92 });
+    // 全屏水波焦散（统一光感，叠在场景之上）
+    Marine.caustics(ctx, G.W, G.H, t, 0.16, 'overlay');
+    // 景深暗角
+    Marine.depthVignette(ctx, G.W, G.H);
 
-    // 分类箱
+    // 涟漪
+    ocean.ripples.forEach(rp => { const k = rp.age / rp.max; ctx.save(); ctx.globalAlpha = (1 - k) * 0.8; ctx.lineWidth = 4 * (1 - k) + 1; ctx.strokeStyle = lighten(rp.col, 40); ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 10 + k * 60, (10 + k * 60) * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore(); });
+
+    // 分类箱（带开盖吞垃圾动画）
     binRects().forEach(r => {
-      const grd = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); grd.addColorStop(0, lighten(r.bin.color, 18)); grd.addColorStop(1, r.bin.color);
+      const grd = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); grd.addColorStop(0, lighten(r.bin.color, 22)); grd.addColorStop(1, lighten(r.bin.color, -8));
+      rr(ctx, r.x, r.y + 4, r.w, r.h, 14); ctx.fillStyle = 'rgba(0,30,50,.25)'; ctx.fill();          // 投影
       rr(ctx, r.x, r.y, r.w, r.h, 14); ctx.fillStyle = grd; ctx.fill();
-      rr(ctx, r.x - 4, r.y - 13, r.w + 8, 17, 8); ctx.fillStyle = lighten(r.bin.color, -18); ctx.fill();
-      ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      rr(ctx, r.x + r.w * 0.08, r.y + r.h * 0.12, r.w * 0.3, r.h * 0.6, 8); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fill();   // 高光
+      // 盖子（命中时翻开）
+      const open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
+      ctx.save(); ctx.translate(r.x - 4, r.y - 6); ctx.rotate(-open * 0.7); rr(ctx, 0, -7, r.w + 8, 16, 8); ctx.fillStyle = lighten(r.bin.color, -22); ctx.fill(); ctx.restore();
+      ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
       ctx.font = 'bold ' + Math.round(r.w * 0.16) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(r.bin.name, r.x + r.w / 2, r.y + r.h * 0.42);
+      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.strokeText(r.bin.name, r.x + r.w / 2, r.y + r.h * 0.42); ctx.fillText(r.bin.name, r.x + r.w / 2, r.y + r.h * 0.42);
       ctx.font = 'bold ' + Math.round(r.w * 0.09) + 'px "PingFang SC",sans-serif'; ctx.globalAlpha = 0.92;
       ctx.fillText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.72); ctx.globalAlpha = 1;
     });
