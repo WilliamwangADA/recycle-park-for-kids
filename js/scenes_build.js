@@ -155,10 +155,9 @@
   // Ada 公主：整个乐园和帐篷的主人
   function drawAda(ctx, x, y, size) {
     const t = G.t, bob = Math.sin(t * 2) * size * 0.05;
-    ctx.fillStyle = 'rgba(255,228,120,.95)';
-    for (let i = 0; i < 3; i++) { const a = t * 1.6 + i * 2.1; ctx.beginPath(); ctx.arc(x + Math.cos(a) * size * 0.55, y - size * 0.25 + Math.sin(a) * size * 0.3, size * 0.04, 0, 7); ctx.fill(); }
     ctx.fillStyle = 'rgba(0,0,0,.12)'; ctx.beginPath(); ctx.ellipse(x, y + size * 0.42, size * 0.3, size * 0.1, 0, 0, 7); ctx.fill();
-    Sprites.draw(ctx, 'ada', x, y + bob, size);
+    if (window.Princess) Princess.draw(ctx, x, y + bob, size, t, {});
+    else Sprites.draw(ctx, 'ada', x, y + bob, size);
     const lw = size * 0.82, lh = size * 0.2, lx = x - lw / 2, ly = y + size * 0.44;
     rr(ctx, lx, ly, lw, lh, lh * 0.5); ctx.fillStyle = '#fff6fb'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = '#e84393'; ctx.stroke();
     ctx.fillStyle = '#e84393'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.62) + 'px "PingFang SC",sans-serif';
