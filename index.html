@@ -2,14 +2,23 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>回收乐园 ♻️</title>
+<!-- iPad / iOS 全屏 App（添加到主屏幕后像原生 App）-->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="回收乐园">
+<meta name="theme-color" content="#2e86de">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="icon" type="image/png" href="assets/icon-192.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
   <canvas id="game"></canvas>
   <div id="loading">回收乐园加载中… ♻️</div>
+  <div id="rotate"><div class="r-emoji">🔄</div><div>把 iPad 横过来玩，更好玩哦！</div><div class="r-sub">（点一下继续）</div></div>
 
   <script src="js/data.js"></script>
   <script src="js/sprites.js"></script>
@@ -24,7 +33,14 @@
       var l = document.getElementById('loading');
       if (l) l.style.display = 'none';
       Game.init();
+      // 横屏提示：点一下关掉；横屏时自动隐藏（CSS 控制显示）
+      var rot = document.getElementById('rotate');
+      if (rot) rot.addEventListener('click', function () { rot.classList.add('dismissed'); });
     });
+    // 阻止 iOS 双击缩放 / 长按菜单 / 橡皮筋滚动
+    document.addEventListener('gesturestart', function (e) { e.preventDefault(); });
+    document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
+    document.addEventListener('touchmove', function (e) { if (e.scale && e.scale !== 1) e.preventDefault(); }, { passive: false });
   </script>
 </body>
 </html>

@@ -200,6 +200,8 @@ window.Game = (function () {
     G.ctx = G.canvas.getContext('2d');
     load(); resize();
     window.addEventListener('resize', resize);
+    window.addEventListener('orientationchange', function () { setTimeout(resize, 200); setTimeout(resize, 500); });
+    if (window.visualViewport) window.visualViewport.addEventListener('resize', resize);
     const c = G.canvas;
     c.addEventListener('mousedown', onDown); c.addEventListener('mousemove', onMove); window.addEventListener('mouseup', onUp);
     c.addEventListener('touchstart', onDown, { passive: false }); c.addEventListener('touchmove', onMove, { passive: false }); c.addEventListener('touchend', onUp);

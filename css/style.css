@@ -1,7 +1,24 @@
-* { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none; }
-html, body { width: 100%; height: 100%; overflow: hidden; background: #aee9ff;
+* { margin: 0; padding: 0; box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none;
+  user-select: none; -webkit-user-select: none; }
+html, body {
+  width: 100%; height: 100%; min-height: 100vh; min-height: -webkit-fill-available;
+  overflow: hidden; position: fixed; inset: 0;
+  background: #aee9ff;
   font-family: "PingFang SC", "Microsoft YaHei", "Comic Sans MS", sans-serif;
-  touch-action: none; overscroll-behavior: none; }
-#game { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh; }
+  touch-action: none; overscroll-behavior: none; -webkit-overflow-scrolling: auto;
+}
+#game { display: block; position: fixed; inset: 0; width: 100vw; height: 100vh;
+  width: 100dvw; height: 100dvh; touch-action: none; }
 #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
   font-size: 5vmin; font-weight: bold; color: #2e7d32; background: #d6f7e6; z-index: 100; }
+
+/* 横屏提示（仅竖屏显示，点一下或转横屏后消失）*/
+#rotate { display: none; position: fixed; inset: 0; z-index: 200;
+  flex-direction: column; align-items: center; justify-content: center; gap: 2.5vmin;
+  background: linear-gradient(160deg, #2e86de, #27ae60); color: #fff; text-align: center;
+  font-size: 4.2vmin; font-weight: bold; padding: 8vmin; }
+#rotate .r-emoji { font-size: 16vmin; animation: spin 2.2s ease-in-out infinite; }
+#rotate .r-sub { font-size: 3vmin; opacity: .85; font-weight: normal; }
+@keyframes spin { 0%,100% { transform: rotate(-25deg); } 50% { transform: rotate(25deg); } }
+@media (orientation: portrait) { #rotate:not(.dismissed) { display: flex; } }
