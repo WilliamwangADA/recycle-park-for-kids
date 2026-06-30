@@ -112,16 +112,30 @@ window.Game = (function () {
     const r = G.canvas.getBoundingClientRect();
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   }
+  function touchDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+  function touchMid(t) { const r = G.canvas.getBoundingClientRect(); return { x: (t[0].clientX + t[1].clientX) / 2 - r.left, y: (t[0].clientY + t[1].clientY) / 2 - r.top }; }
   function onDown(e) {
     e.preventDefault(); Audio2.unlock();
+    if (e.touches && e.touches.length >= 2) {                 // 双指 → 缩放，取消单指拖动
+      G._pinch = { d: touchDist(e.touches), m: touchMid(e.touches) };
+      if (G.scene && G.scene.cancelDrag) G.scene.cancelDrag();
+      return;
+    }
     const p = pos(e); G.pointer.x = p.x; G.pointer.y = p.y; G.pointer.down = true;
     if (G.scene && G.scene.down) G.scene.down(p.x, p.y);
   }
   function onMove(e) {
+    if (G._pinch && e.touches && e.touches.length >= 2) {
+      const d = touchDist(e.touches), m = touchMid(e.touches), f = d / (G._pinch.d || d);
+      if (G.scene && G.scene.onPinch) G.scene.onPinch(f, m.x, m.y);
+      G._pinch.d = d; G._pinch.m = m; G.pointer.x = m.x; G.pointer.y = m.y;
+      return;
+    }
     const p = pos(e); G.pointer.x = p.x; G.pointer.y = p.y;
     if (G.scene && G.scene.move) G.scene.move(p.x, p.y);
   }
   function onUp(e) {
+    if (G._pinch) { if (!e.touches || e.touches.length < 2) G._pinch = null; G.pointer.down = false; return; }
     const p = pos(e); G.pointer.down = false;
     if (G.scene && G.scene.up) G.scene.up(p.x, p.y);
   }
