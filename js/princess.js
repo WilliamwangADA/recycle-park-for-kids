@@ -93,16 +93,27 @@ window.Princess = (function () {
     ctx.globalCompositeOperation = 'source-over';
     [[-0.1, 0.28], [0.08, 0.34], [0.0, 0.2]].forEach((p, i) => { snowflake(ctx, p[0] * u, p[1] * u, 0.035 * u, 0.5 + 0.3 * Math.sin(T * 2 + i), 0.2); });
 
-    // Layer 4 后发 + 脖子
-    ctx.fillStyle = lg(ctx, 0, -0.5 * u, 0, -0.15 * u, '#fdfdff', '#e6eefc');
-    ell(ctx, -0.12 * u, -0.30 * u, 0.075 * u, 0.16 * u, -0.15); ctx.fill();
-    ell(ctx, 0.12 * u, -0.30 * u, 0.075 * u, 0.16 * u, 0.15); ctx.fill();
+    // Layer 4 金色大长发（框住脸 + 两侧垂落到胸前）+ 脖子
+    const hairBack = lg(ctx, 0, -0.5 * u, 0, 0.1 * u, '#ffe79a', '#e3a93e');
+    ctx.fillStyle = hairBack;
+    ell(ctx, -0.14 * u, -0.28 * u, 0.098 * u, 0.21 * u, -0.12); ctx.fill();
+    ell(ctx, 0.14 * u, -0.28 * u, 0.098 * u, 0.21 * u, 0.12); ctx.fill();
+    // 两侧垂落的长发（飘动）
+    const hs = sway * u * 0.02;
+    ctx.beginPath(); ctx.moveTo(-0.155 * u, -0.34 * u); ctx.quadraticCurveTo(-0.215 * u + hs, 0.04 * u, -0.125 * u + hs, 0.2 * u); ctx.quadraticCurveTo(-0.095 * u, 0.02 * u, -0.085 * u, -0.28 * u); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0.155 * u, -0.34 * u); ctx.quadraticCurveTo(0.215 * u - hs, 0.02 * u, 0.135 * u - hs, 0.16 * u); ctx.quadraticCurveTo(0.095 * u, 0.0 * u, 0.085 * u, -0.28 * u); ctx.closePath(); ctx.fill();
+    // 长发高光
+    ctx.strokeStyle = 'rgba(255,250,205,.5)'; ctx.lineWidth = u * 0.012; ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(-0.13 * u, -0.3 * u); ctx.quadraticCurveTo(-0.17 * u + hs, 0.02 * u, -0.12 * u + hs, 0.14 * u); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0.13 * u, -0.3 * u); ctx.quadraticCurveTo(0.17 * u - hs, 0.0 * u, 0.125 * u - hs, 0.12 * u); ctx.stroke();
+    // 脖子
     ctx.fillStyle = lg(ctx, 0, -0.3 * u, 0, -0.2 * u, '#ffe3cf', '#ffd2b8');
     ctx.beginPath(); ctx.moveTo(-0.05 * u, -0.30 * u); ctx.lineTo(0.05 * u, -0.30 * u); ctx.lineTo(0.045 * u, -0.21 * u); ctx.lineTo(-0.045 * u, -0.21 * u); ctx.closePath(); ctx.fill();
-
-    // 刘海/前发顶
-    ctx.fillStyle = lg(ctx, 0, -0.5 * u, 0, -0.33 * u, '#ffffff', '#e9f0fb');
-    ctx.beginPath(); ctx.arc(0, -0.36 * u, 0.135 * u, Math.PI * 1.04, Math.PI * 1.96); ctx.closePath(); ctx.fill();
+    // 头顶金发 + 斜刘海
+    ctx.fillStyle = lg(ctx, 0, -0.5 * u, 0, -0.33 * u, '#ffeaa0', '#f0c155');
+    ctx.beginPath(); ctx.arc(0, -0.36 * u, 0.138 * u, Math.PI * 1.02, Math.PI * 1.98); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-0.12 * u, -0.4 * u); ctx.quadraticCurveTo(0.04 * u, -0.47 * u, 0.13 * u, -0.35 * u); ctx.quadraticCurveTo(0.0 * u, -0.42 * u, -0.07 * u, -0.36 * u); ctx.quadraticCurveTo(-0.11 * u, -0.37 * u, -0.12 * u, -0.4 * u); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,250,205,.45)'; ctx.beginPath(); ctx.ellipse(-0.03 * u, -0.45 * u, 0.06 * u, 0.02 * u, -0.2, 0, 7); ctx.fill();
 
     // Layer 5 脸
     ctx.save(); ctx.rotate(Math.sin(T * 0.7) * 0.02);
@@ -121,11 +132,12 @@ window.Princess = (function () {
         ctx.beginPath(); ctx.arc(ex, ey, 0.03 * u, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
       } else {
         ctx.save(); ctx.translate(ex, ey); ctx.scale(1, eyeOpen);
-        ell(ctx, 0, 0, 0.026 * u, 0.032 * u); ctx.fillStyle = '#fff'; ctx.fill();
-        const iris = ctx.createRadialGradient(0, 0.004 * u, 0, 0, 0.004 * u, 0.02 * u); iris.addColorStop(0, '#bfe6ff'); iris.addColorStop(1, '#4f9fe0');
-        circ(ctx, 0, 0.006 * u, 0.019 * u); ctx.fillStyle = iris; ctx.fill();
-        circ(ctx, 0, 0.008 * u, 0.009 * u); ctx.fillStyle = '#23364a'; ctx.fill();
-        circ(ctx, -0.006 * u, -0.002 * u, 0.005 * u); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill();
+        ell(ctx, 0, 0, 0.03 * u, 0.037 * u); ctx.fillStyle = '#fff'; ctx.fill();
+        const iris = ctx.createRadialGradient(0, 0.004 * u, 0, 0, 0.004 * u, 0.023 * u); iris.addColorStop(0, '#cfeeff'); iris.addColorStop(0.6, '#5aa8ec'); iris.addColorStop(1, '#357fce');
+        circ(ctx, 0, 0.006 * u, 0.022 * u); ctx.fillStyle = iris; ctx.fill();
+        circ(ctx, 0, 0.008 * u, 0.0105 * u); ctx.fillStyle = '#23364a'; ctx.fill();
+        circ(ctx, -0.007 * u, -0.003 * u, 0.0065 * u); ctx.fillStyle = 'rgba(255,255,255,.97)'; ctx.fill();
+        circ(ctx, 0.006 * u, 0.012 * u, 0.003 * u); ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fill();
         ctx.restore();
         // 上眼线 + 睫毛
         ctx.strokeStyle = '#3a4a5a'; ctx.lineWidth = u * 0.006; ctx.lineCap = 'round';
@@ -156,26 +168,32 @@ window.Princess = (function () {
     star4(ctx, 0, -0.01 * u, 0.012 * u, 0.5 + 0.5 * Math.sin(T * 3));
     ctx.restore();
 
-    // Layer 7 垂落麻花辫（搭左肩，裙身前）
+    // Layer 7 金色大麻花辫（爱莎风，搭左肩垂到胸前）
     ctx.save();
-    const N = 10;
-    let prevx = -0.10 * u, prevy = -0.40 * u;
+    const N = 16;
+    let tipx = -0.11 * u, tipy = -0.42 * u;
     for (let i = 1; i <= N; i++) {
       const f = i / N;
-      const xo = Math.sin(T * 1.2 + i * 0.5) * u * 0.03 * f;
-      const px = (-0.10 - f * 0.10) * u + xo;
-      const py = (-0.40 + f * 0.52) * u;
-      const r = (0.05 - f * 0.038) * u;
-      const col = i / N;
-      ctx.fillStyle = 'rgb(' + Math.round(253 - col * 29) + ',' + Math.round(253 - col * 20) + ',' + Math.round(255 - col * 8) + ')';
+      const xo = Math.sin(T * 1.1 + i * 0.45) * u * 0.035 * f;
+      const px = (-0.11 - f * 0.055) * u + xo;
+      const py = (-0.42 + f * 0.78) * u;
+      const r = (0.07 - f * 0.05) * u;
+      // 金色渐变（发根浅亮 → 发尾深金）
+      ctx.fillStyle = 'rgb(' + Math.round(255 - f * 30) + ',' + Math.round(226 - f * 66) + ',' + Math.max(46, Math.round(150 - f * 92)) + ')';
       circ(ctx, px, py, r); ctx.fill();
-      ctx.strokeStyle = 'rgba(200,210,230,.6)'; ctx.lineWidth = r * 0.5;
-      ctx.beginPath(); ctx.moveTo(px - r * 0.7, py - r * 0.3); ctx.lineTo(px + r * 0.7, py + r * 0.3); ctx.stroke();
-      circ(ctx, px - r * 0.3, py - r * 0.4, r * 0.22); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
-      prevx = px; prevy = py;
+      // 编织斜纹（交替方向 → 麻花感）
+      ctx.strokeStyle = 'rgba(176,122,40,.5)'; ctx.lineWidth = r * 0.5; ctx.lineCap = 'round';
+      const dir = i % 2 ? 1 : -1;
+      ctx.beginPath(); ctx.moveTo(px - r * 0.78, py - r * 0.36 * dir); ctx.lineTo(px + r * 0.78, py + r * 0.36 * dir); ctx.stroke();
+      // 高光
+      circ(ctx, px - r * 0.32, py - r * 0.42, r * 0.24); ctx.fillStyle = 'rgba(255,250,210,.85)'; ctx.fill();
+      tipx = px; tipy = py;
     }
-    // 发带
-    ctx.fillStyle = '#7fc7f0'; circ(ctx, prevx, prevy - 0.01 * u, 0.018 * u); ctx.fill(); ctx.strokeStyle = 'rgba(90,160,210,.8)'; ctx.lineWidth = u * 0.005; ctx.stroke();
+    // 发尾散开几缕
+    ctx.strokeStyle = 'rgba(214,158,44,.9)'; ctx.lineWidth = u * 0.012; ctx.lineCap = 'round';
+    for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(tipx, tipy + 0.01 * u); ctx.quadraticCurveTo(tipx + k * 0.03 * u, tipy + 0.05 * u, tipx + k * 0.045 * u, tipy + 0.085 * u); ctx.stroke(); }
+    // 冰蓝发带
+    ctx.fillStyle = '#7fc7f0'; circ(ctx, tipx, tipy - 0.005 * u, 0.022 * u); ctx.fill(); ctx.lineWidth = u * 0.006; ctx.strokeStyle = 'rgba(90,160,210,.85)'; ctx.stroke();
     ctx.restore();
 
     ctx.restore(); // float
