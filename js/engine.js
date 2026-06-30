@@ -11,9 +11,10 @@ window.Game = (function () {
   };
 
   /* ---------- 存档 ---------- */
-  const SAVE_KEY = 'recycle_park_v1';
+  const SAVE_KEY = 'recycle_park_v1', BAK_KEY = 'recycle_park_v1_bak';
   function defaultSave() {
     return {
+      ver: 2,                // 存档版本（升级时只增不破坏）
       bag: {},               // 捡到未分类的垃圾 {trashId: count}
       mats: {},              // 材料 {matId: count}
       built: {},             // 已造物品 {itemId: count}
@@ -33,12 +34,22 @@ window.Game = (function () {
       seen: false,           // 是否看过开场
     };
   }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+  function isObj(o) { return o && typeof o === 'object' && !Array.isArray(o); }
+  // 深度补默认：新版新增字段自动补齐，旧存档里已有的数据(已造/已摆放等)原样保留
+  function fillDefaults(save, def) {
+    for (const k in def) {
+      if (save[k] === undefined || save[k] === null) save[k] = clone(def[k]);
+      else if (isObj(def[k]) && isObj(save[k])) fillDefaults(save[k], def[k]);
+    }
+    return save;
+  }
   function load() {
-    try { G.save = JSON.parse(localStorage.getItem(SAVE_KEY)) || defaultSave(); }
-    catch (e) { G.save = defaultSave(); }
-    // 补字段（向后兼容）
-    const d = defaultSave();
-    for (const k in d) if (G.save[k] == null) G.save[k] = d[k];
+    let parsed = null;
+    try { const raw = localStorage.getItem(SAVE_KEY); if (raw) parsed = JSON.parse(raw); } catch (e) { parsed = null; }
+    if (!parsed) { try { const b = localStorage.getItem(BAK_KEY); if (b) parsed = JSON.parse(b); } catch (e) {} }   // 主存档损坏 → 用备份恢复
+    G.save = parsed || defaultSave();
+    fillDefaults(G.save, defaultSave());   // 深度补齐新字段，保留旧数据
     // homes 结构 + 旧 tentPlaced 迁移到 1 号家客厅
     if (!G.save.homes) G.save.homes = { '1': { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } } };
     if (!G.save.homes['1']) G.save.homes['1'] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } };
@@ -49,9 +60,23 @@ window.Game = (function () {
     for (const hid in G.save.homes) for (const rm in G.save.homes[hid].rooms) all = all.concat(G.save.homes[hid].rooms[rm]);
     all.forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
     if (G.save.placeSeq <= mx) G.save.placeSeq = mx + 1;
+    G.save.ver = defaultSave().ver;
+    // 备份本次加载到的有效存档（万一以后写坏了可回退）
+    try { localStorage.setItem(BAK_KEY, JSON.stringify(G.save)); } catch (e) {}
   }
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.save)); } catch (e) {} }
   function resetSave() { G.save = defaultSave(); persist(); }
+  // 存档导出/导入（让用户手动备份、换设备也能带走进度）
+  function exportSave() { try { return btoa(unescape(encodeURIComponent(JSON.stringify(G.save)))); } catch (e) { return ''; } }
+  function importSave(code) {
+    try {
+      const obj = JSON.parse(decodeURIComponent(escape(atob((code || '').trim()))));
+      if (!isObj(obj) || (!obj.built && !obj.placed && !obj.mats && !obj.homes)) return false;
+      G.save = fillDefaults(obj, defaultSave()); persist();
+      try { localStorage.setItem(BAK_KEY, JSON.stringify(G.save)); } catch (e) {}
+      return true;
+    } catch (e) { return false; }
+  }
 
   /* ---------- 画布 ---------- */
   function resize() {
@@ -238,7 +263,7 @@ window.Game = (function () {
   }
 
   return {
-    G, init, go, openCraft, persist, resetSave,
+    G, init, go, openCraft, persist, resetSave, exportSave, importSave,
     burst, floatText, drawButton, inBtn, roundRect, bg, topBar,
     // 便捷：给材料/星星等
     addMat(k, n) { G.save.mats[k] = (G.save.mats[k] || 0) + n; },

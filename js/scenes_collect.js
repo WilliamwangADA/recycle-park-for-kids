@@ -57,8 +57,20 @@
     const c = { x: G.W / 2 - fbw - 8, y: fy, w: fbw, h: fbh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(fbh * 0.32), onTap: () => Eng.openCraft() };
     const p = { x: G.W / 2 + 8, y: fy, w: fbw, h: fbh, label: '🏡 我的乐园', color: '#27ae60', fs: Math.round(fbh * 0.32), onTap: () => Eng.go('park') };
     menu.buttons.push(c, p); btn(ctx, c); btn(ctx, p);
+    const ss = Math.max(40, G.H * 0.07);
+    const sv = { x: 12, y: 12, w: ss, h: ss, label: '💾', color: '#a29bfe', fs: Math.round(ss * 0.45), onTap: saveMenu };
+    menu.buttons.push(sv); btn(ctx, sv);
     muteBtn(menu, ctx);
   };
+  function saveMenu() {
+    const code = Eng.exportSave();
+    if (typeof prompt !== 'function') return;
+    const v = prompt('【存档备份】复制下面这串字符就能保存你的进度；\n要恢复进度，就把之前保存的存档码粘贴进来，再按「确定」：', code);
+    if (v != null && v.trim() && v.trim() !== code) {
+      if (Eng.importSave(v)) { Audio2.sfx('star'); Eng.go('menu'); Eng.floatText(G.W / 2, G.H * 0.5, '✅ 存档已恢复!', '#27ae60'); }
+      else Eng.floatText(G.W / 2, G.H * 0.5, '存档码不对哦~', '#ff7675');
+    }
+  }
 
   /* ============================ 大海 ============================ */
   const ocean = {}; btnLayer(ocean);
