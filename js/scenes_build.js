@@ -367,14 +367,22 @@
         if (p) { S.drag = { kind: 'placed', p, item: p.item, dx: w.x - p.x, dy: w.y - p.y, scrX: x, scrY: y, sx: x, sy: y }; Audio2.sfx('pop'); return; }
         S.pan = { x, y, camx: S.cam.x, camy: S.cam.y }; return;
       }
-      if (y >= trayTop()) {
-        for (const t of trayLayout()) if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) { if ((G.save.built[t.id] || 0) > 0) S.drag = { kind: 'tray', item: t.id, scrX: x, scrY: y }; return; }
-        S.trayDrag = { sx: x, base: S.trayScroll };
+      if (y >= trayTop()) {                                // 托盘：先记下(可能是横滑滚动，也可能向上拖取物)
+        let item = null;
+        for (const t of trayLayout()) if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) { if ((G.save.built[t.id] || 0) > 0) item = t.id; break; }
+        S.trayDrag = { sx: x, sy: y, base: S.trayScroll, item: item, mode: null };
       }
     };
     S.move = function (x, y) {
       if (S.pan) { S.cam.x = S.pan.camx + (x - S.pan.x); S.cam.y = S.pan.camy + (y - S.pan.y); clampCam(); return; }
-      if (S.trayDrag) { S.trayScroll = Math.min(0, Math.max(-S.trayMax, S.trayDrag.base + (x - S.trayDrag.sx))); return; }
+      if (S.trayDrag) {                                     // 横滑=滚动托盘; 向上拖=把物品拿出来摆放
+        const td = S.trayDrag, dx = x - td.sx, dy = y - td.sy;
+        if (td.mode === null) {
+          if (Math.abs(dx) > 8 && Math.abs(dx) >= Math.abs(dy)) td.mode = 'scroll';
+          else if (dy < -12 && td.item) { S.trayDrag = null; S.drag = { kind: 'tray', item: td.item, scrX: x, scrY: y }; }
+        }
+        if (S.trayDrag) { if (S.trayDrag.mode === 'scroll') S.trayScroll = Math.min(0, Math.max(-S.trayMax, td.base + dx)); return; }
+      }
       if (!S.drag) return;
       S.drag.scrX = x; S.drag.scrY = y;
       const w = s2w(x, y);
