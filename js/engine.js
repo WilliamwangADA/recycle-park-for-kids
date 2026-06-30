@@ -179,23 +179,31 @@ window.Game = (function () {
   }
 
   /* ---------- UI 工具：可点按钮（画布内）---------- */
-  // btns: 数组缓存当前帧按钮，hit() 命中检测
+  function lighten(hex, amt) { if (!hex || hex[0] !== '#') return hex; const n = parseInt(hex.slice(1), 16); let r = (n >> 16) + amt, g = ((n >> 8) & 255) + amt, b = (n & 255) + amt; r = Math.max(0, Math.min(255, r)); g = Math.max(0, Math.min(255, g)); b = Math.max(0, Math.min(255, b)); return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0'); }
+  function softShadow(ctx, cx, cy, rx, ry, a) { const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, Math.max(rx, ry)); g.addColorStop(0, 'rgba(20,24,40,' + (a == null ? .22 : a) + ')'); g.addColorStop(0.7, 'rgba(20,24,40,' + (a == null ? .12 : a * 0.5) + ')'); g.addColorStop(1, 'rgba(20,24,40,0)'); ctx.save(); ctx.translate(cx, cy); ctx.scale(1, ry / rx); ctx.fillStyle = g; ctx.beginPath(); ctx.arc(0, 0, rx, 0, 7); ctx.fill(); ctx.restore(); }
   function drawButton(ctx, b) {
     // b: {x,y,w,h,label,color,sprite,r,pressed,disabled}
-    const r = b.r != null ? b.r : Math.min(b.w, b.h) * 0.28;
+    const r = b.r != null ? b.r : Math.min(b.w, b.h) * 0.3;
     ctx.save();
-    const dy = b.pressed ? 3 : 0;
-    // 底部阴影
-    roundRect(ctx, b.x, b.y + 5, b.w, b.h, r); ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.fill();
-    roundRect(ctx, b.x, b.y + dy, b.w, b.h, r);
-    ctx.fillStyle = b.disabled ? '#c8c8c8' : (b.color || '#ff9f43'); ctx.fill();
-    ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.15)'; ctx.stroke();
+    const dy = b.pressed ? 3 : 0, base = b.disabled ? '#c2c6cc' : (b.color || '#ff9f43');
+    // 柔和投影
+    ctx.save(); ctx.shadowColor = 'rgba(18,20,40,.3)'; ctx.shadowBlur = b.pressed ? 4 : 11; ctx.shadowOffsetY = b.pressed ? 2 : 5;
+    roundRect(ctx, b.x, b.y + dy, b.w, b.h, r); ctx.fillStyle = base; ctx.fill(); ctx.restore();
+    // 渐变体（亮顶→暗底）
+    const g = ctx.createLinearGradient(0, b.y + dy, 0, b.y + dy + b.h);
+    g.addColorStop(0, lighten(base, 30)); g.addColorStop(0.55, base); g.addColorStop(1, lighten(base, -16));
+    roundRect(ctx, b.x, b.y + dy, b.w, b.h, r); ctx.fillStyle = g; ctx.fill();
+    // 顶部玻璃高光
+    ctx.save(); roundRect(ctx, b.x, b.y + dy, b.w, b.h, r); ctx.clip(); roundRect(ctx, b.x + b.w * 0.05, b.y + dy + b.h * 0.08, b.w * 0.9, b.h * 0.42, r * 0.7); ctx.fillStyle = 'rgba(255,255,255,.3)'; ctx.fill(); ctx.restore();
+    // 内浅描边 + 外深描边
+    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,255,255,.45)'; roundRect(ctx, b.x + 1.2, b.y + dy + 1.2, b.w - 2.4, b.h - 2.4, Math.max(1, r - 1)); ctx.stroke();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = lighten(base, -36); roundRect(ctx, b.x, b.y + dy, b.w, b.h, r); ctx.stroke();
     if (b.sprite) Sprites.draw(ctx, b.sprite, b.x + b.h * 0.5, b.y + b.h * 0.5 + dy, b.h * 0.7);
     if (b.label) {
-      ctx.fillStyle = b.disabled ? '#888' : (b.text || '#fff');
+      ctx.fillStyle = b.disabled ? '#7a7d82' : (b.text || '#fff');
       ctx.font = 'bold ' + (b.fs || Math.round(b.h * 0.4)) + 'px "PingFang SC",sans-serif';
-      ctx.textAlign = b.sprite ? 'left' : 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,.18)';
+      ctx.textAlign = b.sprite ? 'left' : 'center'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,.22)';
       const tx = b.sprite ? b.x + b.h : b.x + b.w / 2, ty = b.y + b.h / 2 + dy;
       ctx.strokeText(b.label, tx, ty); ctx.fillText(b.label, tx, ty);
     }
@@ -219,12 +227,14 @@ window.Game = (function () {
   function topBar(ctx, y) {
     const pad = 10, h = Math.max(44, G.H * 0.072); y = y == null ? pad : y;
     ctx.save();
-    // 外壳
-    roundRect(ctx, pad, y, G.W - pad * 2, h, 14);
+    // 外壳（柔影 + 玻璃渐变 + 顶部高光）
+    ctx.save(); ctx.shadowColor = 'rgba(20,30,60,.22)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4; roundRect(ctx, pad, y, G.W - pad * 2, h, 16); ctx.fillStyle = '#fff'; ctx.fill(); ctx.restore();
+    roundRect(ctx, pad, y, G.W - pad * 2, h, 16);
     const gr = ctx.createLinearGradient(0, y, 0, y + h);
-    gr.addColorStop(0, 'rgba(255,255,255,.94)'); gr.addColorStop(1, 'rgba(236,244,250,.92)');
+    gr.addColorStop(0, 'rgba(255,255,255,.97)'); gr.addColorStop(1, 'rgba(232,242,250,.94)');
     ctx.fillStyle = gr; ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.06)'; ctx.stroke();
+    ctx.save(); roundRect(ctx, pad, y, G.W - pad * 2, h, 16); ctx.clip(); roundRect(ctx, pad + 4, y + 3, G.W - pad * 2 - 8, h * 0.4, 12); ctx.fillStyle = 'rgba(255,255,255,.5)'; ctx.fill(); ctx.restore();
+    ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(120,150,180,.25)'; roundRect(ctx, pad, y, G.W - pad * 2, h, 16); ctx.stroke();
     const mats = DATA.MATERIALS, keys = Object.keys(mats);
     const starW = h * 1.5;
     const cell = (G.W - pad * 2 - starW) / keys.length;
@@ -264,7 +274,7 @@ window.Game = (function () {
 
   return {
     G, init, go, openCraft, persist, resetSave, exportSave, importSave,
-    burst, floatText, drawButton, inBtn, roundRect, bg, topBar,
+    burst, floatText, drawButton, inBtn, roundRect, bg, topBar, softShadow, lighten,
     // 便捷：给材料/星星等
     addMat(k, n) { G.save.mats[k] = (G.save.mats[k] || 0) + n; },
   };

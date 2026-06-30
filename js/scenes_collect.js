@@ -27,8 +27,10 @@
     ctx.fillStyle = '#9be86b'; ctx.beginPath(); ctx.moveTo(0, G.H * 0.7); ctx.quadraticCurveTo(G.W * 0.5, G.H * 0.64, G.W, G.H * 0.7); ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.font = 'bold ' + Math.round(G.H * 0.085) + 'px "PingFang SC",sans-serif';
-    ctx.lineWidth = 8; ctx.strokeStyle = '#2e7d32'; ctx.fillStyle = '#fff';
-    ctx.strokeText('回收乐园', G.W / 2, G.H * 0.18); ctx.fillText('回收乐园', G.W / 2, G.H * 0.18);
+    ctx.save(); ctx.shadowColor = 'rgba(20,80,30,.4)'; ctx.shadowBlur = 14; ctx.shadowOffsetY = 5;
+    ctx.lineWidth = 10; ctx.lineJoin = 'round'; ctx.strokeStyle = '#2e7d32'; ctx.strokeText('回收乐园', G.W / 2, G.H * 0.18); ctx.restore();
+    const tg = ctx.createLinearGradient(0, G.H * 0.12, 0, G.H * 0.225); tg.addColorStop(0, '#ffffff'); tg.addColorStop(1, '#cdf0c4'); ctx.fillStyle = tg;
+    ctx.fillText('回收乐园', G.W / 2, G.H * 0.18);
     ctx.font = 'bold ' + Math.round(G.H * 0.032) + 'px "PingFang SC",sans-serif'; ctx.fillStyle = '#3a7d3a';
     ctx.fillText('捡垃圾 · 分一分 · 变材料 · 造乐园', G.W / 2, G.H * 0.28);
 
@@ -40,8 +42,10 @@
     const iw = (cw - gap * (n - 1)) / n, ih = iw * 1.1, sx = (G.W - cw) / 2, sy = G.H * 0.53;
     cards.forEach((lv, i) => {
       const x = sx + i * (iw + gap), un = lvUnlocked(i), done = !!G.save.cleared[lv.id];
-      rr(ctx, x, sy, iw, ih, 12); ctx.fillStyle = un ? '#fff' : 'rgba(255,255,255,.5)'; ctx.fill();
-      ctx.lineWidth = 3; ctx.strokeStyle = done ? '#27ae60' : (un ? '#2e86de' : '#b2bec3'); ctx.stroke();
+      Eng.softShadow(ctx, x + iw / 2, sy + ih + 3, iw * 0.46, ih * 0.1, 0.2);
+      const cg = ctx.createLinearGradient(0, sy, 0, sy + ih); cg.addColorStop(0, un ? '#ffffff' : 'rgba(255,255,255,.6)'); cg.addColorStop(1, un ? '#eef6ff' : 'rgba(240,244,248,.5)');
+      rr(ctx, x, sy, iw, ih, 14); ctx.fillStyle = cg; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = done ? '#27ae60' : (un ? '#5aa8ec' : '#c2cad3'); ctx.stroke();
       ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
       ctx.fillStyle = un ? '#2d3436' : '#9aa'; ctx.font = 'bold ' + Math.round(iw * 0.3) + 'px "PingFang SC",sans-serif';
       ctx.fillText(un ? lv.icon : '🔒', x + iw / 2, sy + ih * 0.46);
@@ -384,11 +388,13 @@
       const hg = ctx.createRadialGradient(it.x + sh, iy, 0, it.x + sh, iy, sz * 0.62);
       hg.addColorStop(0, 'rgba(255,255,255,.5)'); hg.addColorStop(0.6, 'rgba(255,255,255,.18)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
       ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(it.x + sh, iy, sz * 0.62, 0, 7); ctx.fill();
-      // 落影
-      ctx.save(); ctx.globalAlpha = 0.18; ctx.fillStyle = '#012238'; ctx.beginPath(); ctx.ellipse(it.x + sh, iy + sz * 0.42, sz * 0.32, sz * 0.12, 0, 0, 7); ctx.fill(); ctx.restore();
-      if (drag) { ctx.save(); ctx.shadowColor = 'rgba(255,245,150,.95)'; ctx.shadowBlur = 26; }
+      // 接触柔影
+      Eng.softShadow(ctx, it.x + sh, iy + sz * 0.42, sz * 0.32, sz * 0.13, 0.22);
+      ctx.save();
+      if (drag) { ctx.shadowColor = 'rgba(255,245,150,.95)'; ctx.shadowBlur = 26; }
+      else { ctx.shadowColor = 'rgba(0,18,38,.34)'; ctx.shadowBlur = sz * 0.06; ctx.shadowOffsetY = sz * 0.04; }
       Sprites.draw(ctx, DATA.TRASH[it.id].sprite, it.x + sh, iy, sz, { rot: drag ? Math.sin(t * 8) * 0.06 : it.ang });
-      if (drag) ctx.restore();
+      ctx.restore();
     });
     // 工具（捞网/夹子/扫把）+ 挥动捞起动画
     const scoop = ocean.scoopT > 0 ? Math.sin((1 - ocean.scoopT / 0.3) * Math.PI) : 0;   // 0→1→0
@@ -407,25 +413,35 @@
       Marine.caustics(ctx, G.W, G.H, t, 0.16, 'overlay');
       // 景深暗角
       Marine.depthVignette(ctx, G.W, G.H);
+    } else {
+      // 陆地：柔和暗角 + 顶部光，增加层次
+      const tl = ctx.createLinearGradient(0, waterTop(), 0, sandTop()); tl.addColorStop(0, 'rgba(255,255,255,.06)'); tl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = tl; ctx.fillRect(0, 0, G.W, sandTop());
+      const v = ctx.createRadialGradient(G.W / 2, G.H * 0.42, G.H * 0.32, G.W / 2, G.H * 0.5, G.H * 0.9); v.addColorStop(0, 'rgba(0,0,0,0)'); v.addColorStop(1, 'rgba(25,18,8,.26)'); ctx.fillStyle = v; ctx.fillRect(0, 0, G.W, G.H);
     }
 
     // 涟漪
     ocean.ripples.forEach(rp => { const k = rp.age / rp.max; ctx.save(); ctx.globalAlpha = (1 - k) * 0.8; ctx.lineWidth = 4 * (1 - k) + 1; ctx.strokeStyle = lighten(rp.col, 40); ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 10 + k * 60, (10 + k * 60) * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore(); });
 
-    // 分类箱（带开盖吞垃圾动画）
+    // 分类箱（立体光泽 + 开口 + 名牌 + 开盖吞垃圾动画）
     binRects().forEach(r => {
-      const grd = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); grd.addColorStop(0, lighten(r.bin.color, 22)); grd.addColorStop(1, lighten(r.bin.color, -8));
-      rr(ctx, r.x, r.y + 4, r.w, r.h, 14); ctx.fillStyle = 'rgba(0,30,50,.25)'; ctx.fill();          // 投影
-      rr(ctx, r.x, r.y, r.w, r.h, 14); ctx.fillStyle = grd; ctx.fill();
-      rr(ctx, r.x + r.w * 0.08, r.y + r.h * 0.12, r.w * 0.3, r.h * 0.6, 8); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.fill();   // 高光
-      // 盖子（命中时翻开）
-      const open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
-      ctx.save(); ctx.translate(r.x - 4, r.y - 6); ctx.rotate(-open * 0.7); rr(ctx, 0, -7, r.w + 8, 16, 8); ctx.fillStyle = lighten(r.bin.color, -22); ctx.fill(); ctx.restore();
-      ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.font = 'bold ' + Math.round(r.w * 0.16) + 'px "PingFang SC",sans-serif';
-      ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.18)'; ctx.strokeText(r.bin.name, r.x + r.w / 2, r.y + r.h * 0.42); ctx.fillText(r.bin.name, r.x + r.w / 2, r.y + r.h * 0.42);
-      ctx.font = 'bold ' + Math.round(r.w * 0.09) + 'px "PingFang SC",sans-serif'; ctx.globalAlpha = 0.92;
-      ctx.fillText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.72); ctx.globalAlpha = 1;
+      const c = r.bin.color, open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
+      Eng.softShadow(ctx, r.x + r.w / 2, r.y + r.h + 5, r.w * 0.5, r.h * 0.12, 0.3);
+      const grd = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); grd.addColorStop(0, lighten(c, 26)); grd.addColorStop(0.5, c); grd.addColorStop(1, lighten(c, -22));
+      rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.fillStyle = grd; ctx.fill();
+      ctx.save(); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.clip();
+      rr(ctx, r.x + r.w * 0.12, r.y + r.h * 0.05, r.w * 0.76, r.h * 0.18, 10); ctx.fillStyle = lighten(c, -42); ctx.fill();   // 开口深槽
+      const gl = ctx.createLinearGradient(r.x, 0, r.x + r.w * 0.45, 0); gl.addColorStop(0, 'rgba(255,255,255,.34)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(r.x, r.y, r.w * 0.45, r.h);   // 左高光
+      ctx.strokeStyle = lighten(c, -14); ctx.lineWidth = 2; for (let i = 1; i < 4; i++) { const x = r.x + r.w * i / 4; ctx.beginPath(); ctx.moveTo(x, r.y + r.h * 0.3); ctx.lineTo(x, r.y + r.h * 0.92); ctx.stroke(); }   // 竖纹
+      ctx.restore();
+      ctx.lineWidth = 2; ctx.strokeStyle = lighten(c, -30); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
+      // 盖子（命中翻开）
+      ctx.save(); ctx.translate(r.x - 4, r.y - 6); ctx.rotate(-open * 0.7); const lg2 = ctx.createLinearGradient(0, -8, 0, 10); lg2.addColorStop(0, lighten(c, 12)); lg2.addColorStop(1, lighten(c, -26)); rr(ctx, 0, -8, r.w + 8, 18, 9); ctx.fillStyle = lg2; ctx.fill(); rr(ctx, (r.w + 8) / 2 - r.w * 0.06, -6, r.w * 0.12, 5, 3); ctx.fillStyle = lighten(c, -34); ctx.fill(); ctx.restore();
+      // 名牌
+      const ph = r.h * 0.26, py = r.y + r.h * 0.36; rr(ctx, r.x + r.w * 0.1, py, r.w * 0.8, ph, ph * 0.42); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill();
+      ctx.fillStyle = lighten(c, -28); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(r.w * 0.16) + 'px "PingFang SC",sans-serif';
+      ctx.fillText(r.bin.name, r.x + r.w / 2, py + ph * 0.5);
+      ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.font = 'bold ' + Math.round(r.w * 0.085) + 'px "PingFang SC",sans-serif';
+      ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.strokeText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.83); ctx.fillText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.83);
     });
 
     // 计分牌

@@ -61,7 +61,9 @@
       const x = pad + col * (cw + gap), y = startY + row * (ch + gap) + craft.scrollY;
       if (y > G.H || y + ch < top) return;
       const ok = canAfford(it.cost), built = G.save.built[id] || 0;
-      rr(ctx, x, y, cw, ch, 16); ctx.fillStyle = ok ? '#ffffff' : '#ececec'; ctx.fill();
+      Eng.softShadow(ctx, x + cw / 2, y + ch + 2, cw * 0.46, ch * 0.07, 0.16);
+      const cardg = ctx.createLinearGradient(0, y, 0, y + ch); cardg.addColorStop(0, ok ? '#ffffff' : '#ededed'); cardg.addColorStop(1, ok ? '#fff6e6' : '#e4e4e4');
+      rr(ctx, x, y, cw, ch, 16); ctx.fillStyle = cardg; ctx.fill();
       ctx.lineWidth = 3; ctx.strokeStyle = ok ? '#f6b73c' : '#cfcfcf'; ctx.stroke();
       ctx.globalAlpha = ok ? 1 : 0.5;
       Sprites.draw(ctx, it.sprite, x + cw / 2, y + ch * 0.32, cw * 0.5);
@@ -466,8 +468,10 @@
       order.forEach(p => {
         const ds = dsp(p), home = isHome(p), dragging = S.drag && S.drag.kind === 'placed' && S.drag.p === p;
         if (home) { ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.62, ds * 0.22, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(214,189,140,.5)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.5, ds * 0.17, 0, 0, 7); ctx.fill(); }
-        if (!p.onId) { ctx.fillStyle = 'rgba(0,0,0,' + (dragging ? .22 : .14) + ')'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.4, ds * 0.32, ds * 0.12, 0, 0, 7); ctx.fill(); }
+        if (!p.onId) Eng.softShadow(ctx, p.x, p.y + ds * 0.42, ds * 0.34, ds * 0.13, dragging ? .26 : .18);
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = ds * 0.05; ctx.shadowOffsetY = ds * 0.04;
         Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1), { rot: p.rot || 0 });
+        ctx.restore();
         if (home) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; const lw = ds * 0.66, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5; rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.6) + 'px "PingFang SC",sans-serif'; ctx.fillText('🚪 点我进去', p.x, ly + lh / 2); }
       });
       if (S.drag && S.drag.item && DATA.ITEMS[S.drag.item] && DATA.ITEMS[S.drag.item].onTop) { const wp = s2w(S.drag.scrX, S.drag.scrY); const surf = surfaceAt(wp.x, wp.y, S.drag.kind === 'placed' ? S.drag.p : null); if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w2 = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w2, surfaceTopY(surf) - 7, w2 * 2, 14); ctx.restore(); } }
