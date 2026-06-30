@@ -436,12 +436,17 @@
       ctx.lineWidth = 2; ctx.strokeStyle = lighten(c, -30); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
       // 盖子（命中翻开）
       ctx.save(); ctx.translate(r.x - 4, r.y - 6); ctx.rotate(-open * 0.7); const lg2 = ctx.createLinearGradient(0, -8, 0, 10); lg2.addColorStop(0, lighten(c, 12)); lg2.addColorStop(1, lighten(c, -26)); rr(ctx, 0, -8, r.w + 8, 18, 9); ctx.fillStyle = lg2; ctx.fill(); rr(ctx, (r.w + 8) / 2 - r.w * 0.06, -6, r.w * 0.12, 5, 3); ctx.fillStyle = lighten(c, -34); ctx.fill(); ctx.restore();
+      // 分类大图标（白圆牌衬底，一眼看懂往哪扔）
+      const cxm = r.x + r.w / 2, iy = r.y + r.h * 0.37, ir = r.w * 0.19;
+      ctx.beginPath(); ctx.arc(cxm, iy, ir, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = Math.round(r.w * 0.25) + 'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+      ctx.fillText(r.bin.icon || '🗑️', cxm, iy + r.w * 0.012);
       // 名牌
-      const ph = r.h * 0.26, py = r.y + r.h * 0.36; rr(ctx, r.x + r.w * 0.1, py, r.w * 0.8, ph, ph * 0.42); ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.fill();
-      ctx.fillStyle = lighten(c, -28); ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(r.w * 0.16) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(r.bin.name, r.x + r.w / 2, py + ph * 0.5);
-      ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.font = 'bold ' + Math.round(r.w * 0.085) + 'px "PingFang SC",sans-serif';
-      ctx.lineWidth = 2.5; ctx.strokeStyle = 'rgba(0,0,0,.2)'; ctx.strokeText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.83); ctx.fillText(r.bin.tip, r.x + r.w / 2, r.y + r.h * 0.83);
+      const ph = r.h * 0.2, py = r.y + r.h * 0.63; rr(ctx, r.x + r.w * 0.08, py, r.w * 0.84, ph, ph * 0.42); ctx.fillStyle = lighten(c, -30); ctx.fill();
+      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.round(r.w * 0.15) + 'px "PingFang SC",sans-serif';
+      ctx.fillText(r.bin.name, cxm, py + ph * 0.54);
+      ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = 'bold ' + Math.round(r.w * 0.07) + 'px "PingFang SC",sans-serif';
+      ctx.fillText(r.bin.tip, cxm, r.y + r.h * 0.9);
     });
 
     // 计分牌

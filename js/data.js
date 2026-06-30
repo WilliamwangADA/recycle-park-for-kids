@@ -8,10 +8,10 @@ window.DATA = (function () {
 
   /* ---- 四个分类箱 ---- */
   const BINS = [
-    { id: 'recycle', name: '可回收', color: '#2e86de', tip: '瓶罐 纸 木 玻璃' },
-    { id: 'kitchen', name: '厨余',   color: '#27ae60', tip: '果皮 鱼骨 菜叶' },
-    { id: 'hazard',  name: '有害',   color: '#c0392b', tip: '电池 灯泡' },
-    { id: 'other',   name: '其他',   color: '#8395a7', tip: '泡沫 橡胶' },
+    { id: 'recycle', name: '可回收', color: '#2e86de', tip: '瓶罐 纸 木 玻璃', icon: '♻️' },
+    { id: 'kitchen', name: '厨余',   color: '#27ae60', tip: '果皮 鱼骨 菜叶', icon: '🍎' },
+    { id: 'hazard',  name: '有害',   color: '#c0392b', tip: '电池 灯泡',     icon: '🔋' },
+    { id: 'other',   name: '其他',   color: '#8395a7', tip: '泡沫 橡胶',     icon: '🗑️' },
   ];
 
   /* ---- 再生原料（计分牌 & 建造配方都用它）---- */

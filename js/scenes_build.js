@@ -461,7 +461,12 @@
       ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
       ctx.translate(S.cam.x, S.cam.y); ctx.scale(S.cam.s, S.cam.s);
       opts.bg(ctx, WW, WH, S);
-      if (opts.showVisitors) DATA.VISITORS.filter(v => G.save.visitors[v.id]).forEach((v, i) => { const t = G.t * 0.25 + i * 1.7, x = WW * 0.5 + Math.cos(t) * WW * 0.3, y = WH * 0.62 + Math.sin(t * 1.3) * WH * 0.28; Sprites.draw(ctx, v.sprite, x, y - Math.abs(Math.sin(G.t * 4 + i)) * 8, 110); });
+      if (opts.showVisitors) DATA.VISITORS.filter(v => G.save.visitors[v.id]).forEach((v, i) => {
+        const t = G.t * 0.22 + i * 1.7, x = WW * 0.5 + Math.cos(t) * WW * 0.3, yf = WH * 0.64 + Math.sin(t * 1.3) * WH * 0.28, sz = 200;
+        Eng.softShadow(ctx, x, yf, sz * 0.16, sz * 0.05, 0.28);
+        if (window.Critters) Critters.draw(ctx, v.id, x, yf, sz, G.t, { phase: i * 0.6 });
+        else Sprites.draw(ctx, v.sprite, x, yf - sz * 0.4, sz * 0.6);
+      });
       listArr().forEach(c => { if (c.onId) { const par = listArr().find(p => p.id === c.onId); if (!par) c.onId = null; else { c.x = par.x + (c.offx || 0); c.y = surfaceTopY(par) - dispS(c.item) * 0.18; } } });
       const roots = listArr().filter(p => !p.onId).sort((a, b) => a.y - b.y), order = [];
       roots.forEach(r => { order.push(r); childrenOf(r.id).sort((a, b) => a.x - b.x).forEach(c => order.push(c)); });
