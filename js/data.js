@@ -44,6 +44,15 @@ window.DATA = (function () {
     bulb:     { name: '旧灯泡', sprite: 't_bulb',     bin: 'hazard',  yield: null },
     foam:     { name: '泡沫块', sprite: 't_foam',     bin: 'other',   yield: null },
     boot:     { name: '旧靴子', sprite: 't_boot',     bin: 'other',   yield: 'rubber' },
+    // —— 各关专属垃圾 ——
+    icecream: { name: '雪糕',   sprite: 't_icecream', bin: 'kitchen', yield: null },
+    pizza:    { name: '披萨',   sprite: 't_pizza',    bin: 'kitchen', yield: null },
+    egg:      { name: '蛋壳',   sprite: 't_egg',      bin: 'kitchen', yield: null },
+    juicebox: { name: '饮料盒', sprite: 't_juicebox', bin: 'recycle', yield: 'paper' },
+    coffee:   { name: '咖啡杯', sprite: 't_coffee',   bin: 'recycle', yield: 'paper' },
+    pencil:   { name: '铅笔头', sprite: 't_pencil',   bin: 'recycle', yield: 'wood' },
+    mask:     { name: '旧口罩', sprite: 't_mask',     bin: 'other',   yield: null },
+    chips:    { name: '薯片袋', sprite: 't_chips',    bin: 'other',   yield: null },
   };
 
   /* ---- 可制造物品 ----
@@ -82,21 +91,22 @@ window.DATA = (function () {
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */
+  // unlocked 仅表示初始解锁（大海）；其余靠通关前一关解锁（见场景 isUnlocked）
   const LEVELS = [
     { id: 'ocean',  name: '大海', theme: 'ocean', icon: '🌊', unlocked: true, tool: 'net',
-      trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot'] },
-    { id: 'park',   name: '公园', theme: 'park',  icon: '🌳', unlocked: true, tool: 'tongs',
-      trash: ['bottle','bag','cup','can','news','banana','apple','foam'] },
-    { id: 'town',   name: '小区', theme: 'town',  icon: '🏘️', unlocked: true, tool: 'broom',
-      trash: ['box','bottle','can','battery','apple','foam','news','bag'] },
-    { id: 'school', name: '学校', theme: 'school',icon: '🏫', unlocked: true, tool: 'tongs',
-      trash: ['news','cup','glass','apple','bulb','box','bottle','banana'] },
-    { id: 'forest', name: '森林', theme: 'forest',icon: '🌲', unlocked: true, tool: 'tongs',
-      trash: ['bottle','bag','can','banana','apple','foam','box','glass'] },
-    { id: 'mount',  name: '大山', theme: 'mount', icon: '⛰️', unlocked: true, tool: 'broom',
-      trash: ['glass','tin','box','apple','battery','bottle','can','foam'] },
-    { id: 'city',   name: '城市', theme: 'city',  icon: '🏙️', unlocked: true, tool: 'broom',
-      trash: ['bottle','can','box','foam','bulb','battery','cup','bag','news'] },
+      trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot','mask'] },
+    { id: 'park',   name: '公园', theme: 'park',  icon: '🌳', unlocked: false, tool: 'tongs',
+      trash: ['bottle','bag','cup','can','news','banana','apple','foam','icecream','juicebox','chips'] },
+    { id: 'town',   name: '小区', theme: 'town',  icon: '🏘️', unlocked: false, tool: 'broom',
+      trash: ['box','bottle','can','battery','apple','foam','news','bag','coffee','mask','chips'] },
+    { id: 'school', name: '学校', theme: 'school',icon: '🏫', unlocked: false, tool: 'tongs',
+      trash: ['news','cup','glass','apple','bulb','box','pencil','juicebox','egg','chips'] },
+    { id: 'forest', name: '森林', theme: 'forest',icon: '🌲', unlocked: false, tool: 'tongs',
+      trash: ['bottle','bag','can','banana','apple','foam','box','glass','icecream','egg'] },
+    { id: 'mount',  name: '大山', theme: 'mount', icon: '⛰️', unlocked: false, tool: 'broom',
+      trash: ['glass','tin','box','apple','battery','bottle','can','foam','coffee','chips'] },
+    { id: 'city',   name: '城市', theme: 'city',  icon: '🏙️', unlocked: false, tool: 'broom',
+      trash: ['bottle','can','box','foam','bulb','battery','cup','bag','pizza','mask','coffee','chips'] },
   ];
 
   /* ---- 乐园访客（人气达标解锁）---- */

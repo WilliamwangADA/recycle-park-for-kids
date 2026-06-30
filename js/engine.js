@@ -22,6 +22,7 @@ window.Game = (function () {
       adaPos: {},            // Ada 公主位置 {park:{x,y}, tent:{x,y}}（可拖动+自己溜达）
       placeSeq: 1,           // 摆放项唯一 id 自增
       stars: 0,              // 分类星星（货币之一，给造物提示用）
+      cleared: {},           // 已通关的关卡 {levelId:true}（解锁下一关）
       popularity: 0,         // 人气
       visitors: {},          // 已吸引来的访客
       seen: false,           // 是否看过开场

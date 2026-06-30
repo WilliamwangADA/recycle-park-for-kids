@@ -39,14 +39,16 @@
     const cards = DATA.LEVELS, cw = Math.min(G.W * 0.92, 720), n = cards.length, gap = 8;
     const iw = (cw - gap * (n - 1)) / n, ih = iw * 1.1, sx = (G.W - cw) / 2, sy = G.H * 0.53;
     cards.forEach((lv, i) => {
-      const x = sx + i * (iw + gap);
-      rr(ctx, x, sy, iw, ih, 12); ctx.fillStyle = lv.unlocked ? '#fff' : 'rgba(255,255,255,.5)'; ctx.fill();
-      ctx.lineWidth = 3; ctx.strokeStyle = lv.unlocked ? '#2e86de' : '#b2bec3'; ctx.stroke();
-      ctx.fillStyle = lv.unlocked ? '#2d3436' : '#9aa'; ctx.font = 'bold ' + Math.round(iw * 0.3) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(lv.unlocked ? lv.icon : '🔒', x + iw / 2, sy + ih * 0.4);
+      const x = sx + i * (iw + gap), un = lvUnlocked(i), done = !!G.save.cleared[lv.id];
+      rr(ctx, x, sy, iw, ih, 12); ctx.fillStyle = un ? '#fff' : 'rgba(255,255,255,.5)'; ctx.fill();
+      ctx.lineWidth = 3; ctx.strokeStyle = done ? '#27ae60' : (un ? '#2e86de' : '#b2bec3'); ctx.stroke();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.fillStyle = un ? '#2d3436' : '#9aa'; ctx.font = 'bold ' + Math.round(iw * 0.3) + 'px "PingFang SC",sans-serif';
+      ctx.fillText(un ? lv.icon : '🔒', x + iw / 2, sy + ih * 0.46);
       ctx.font = 'bold ' + Math.round(iw * 0.2) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(lv.name, x + iw / 2, sy + ih * 0.78);
-      if (lv.unlocked) menu.buttons.push({ x, y: sy, w: iw, h: ih, onTap: () => Eng.go('ocean', lv) });
+      ctx.fillText(lv.name, x + iw / 2, sy + ih * 0.82);
+      if (done) { ctx.font = 'bold ' + Math.round(iw * 0.26) + 'px sans-serif'; ctx.fillText('✅', x + iw * 0.8, sy + ih * 0.26); }
+      if (un) menu.buttons.push({ x, y: sy, w: iw, h: ih, onTap: () => Eng.go('ocean', lv) });
     });
     ctx.font = 'bold ' + Math.round(G.H * 0.024) + 'px "PingFang SC",sans-serif'; ctx.fillStyle = '#3a7d3a';
     ctx.fillText('点一个地方去清理吧～', G.W / 2, sy + ih + G.H * 0.03);
@@ -72,7 +74,7 @@
     ocean:  { water: true },
     park:   { sky: ['#bfe8ff', '#e3f8df'], ground: ['#a6e36a', '#7cc24a'], decor: ['i_tree', 'd_bush', 'i_flowers', 'i_bench', 'i_tree', 'd_bush'], critters: ['c_butterfly', 'v_bird', 'c_squirrel'], particle: 'leaf' },
     town:   { sky: ['#cfe9ff', '#eef3f8'], ground: ['#c2cdd8', '#9aa7b5'], decor: ['d_house', 'i_lamp', 'i_mailbox', 'd_building', 'd_house'], critters: ['c_dove', 'v_cat'], particle: 'dust' },
-    school: { sky: ['#d7ecff', '#fdf3da'], ground: ['#cdd6a8', '#aebf80'], decor: ['i_tree', 'd_school', 'i_bench', 'i_flowers', 'i_tree'], critters: ['c_dove', 'c_butterfly'], particle: 'leaf' },
+    school: { indoor: true, ground: ['#caa06a', '#a87f48'], decor: [], critters: [], particle: 'dust' },
     forest: { sky: ['#bfe6d6', '#dff3df'], ground: ['#7fbf57', '#5a9a3c'], decor: ['d_pine', 'i_tree', 'd_mushroom', 'd_pine', 'd_bush', 'd_pine'], critters: ['c_deer', 'v_bunny', 'c_butterfly'], particle: 'leaf' },
     mount:  { sky: ['#cfe6f5', '#eaf3fb'], ground: ['#b7b0a0', '#8d8474'], decor: ['d_mountain', 'd_pine', 'd_rock', 'd_pine', 'd_mountain'], critters: ['c_goat', 'c_dove'], particle: 'snow' },
     city:   { sky: ['#cfe2f2', '#e6edf3'], ground: ['#b0b8c2', '#878f99'], decor: ['d_building', 'd_building', 'i_lamp', 'd_house', 'd_building'], critters: ['c_dove'], particle: 'dust' },
@@ -89,11 +91,12 @@
       for (let i = 0; i < 7; i++) ocean.fish.push(newFish());
       for (let i = 0; i < 2; i++) ocean.jellies.push({ x: Math.random() * G.W, y: waterTop() + 40 + Math.random() * 120, s: G.H * (0.07 + Math.random() * 0.03), vx: (Math.random() - .5) * 8, vy: -4 - Math.random() * 4, ph: Math.random() * 6.28 });
       for (let i = 0; i < 46; i++) ocean.plankton.push({ x: Math.random() * G.W, y: Math.random() * G.H, r: 0.6 + Math.random() * 1.8, vy: -3 - Math.random() * 6, ph: Math.random() * 6.28 });
-    } else {
+    } else if (ocean.cfg.critters.length) {
       for (let i = 0; i < 6; i++) ocean.critters.push(newCritter());
     }
     ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
     ocean.tool = ocean.lv.tool || 'net'; ocean.scoopT = 0; ocean.droplets = []; ocean.combo = 0; ocean.comboT = 0;
+    ocean.justCleared = false; ocean.firstClear = false; ocean.nextLv = null;
     Audio2.sfx('splash'); Audio2.voice(ocean.water ? 'ocean_intro' : 'land_intro');
   };
   ocean.resize = function () { if (ocean.water) Marine.init(G.W, G.H); setupDecor(); };
@@ -106,8 +109,14 @@
     ocean.items = [];
     const pool = ocean.lv.trash, top = waterTop() + 20, bot = sandTop() - 16;
     for (let i = 0; i < count; i++) {
-      ocean.items.push({ id: pick(pool), x: 50 + Math.random() * (G.W - 100), y: top + Math.random() * (bot - top),
-        vx: (Math.random() - .5) * 14, vy: (Math.random() - .5) * 10, ph: Math.random() * 6.28, s: G.H * 0.115, ang: (Math.random() - .5) * 0.35, va: (Math.random() - .5) * 0.2 });
+      const s = G.H * 0.115, it = { id: pick(pool), x: 50 + Math.random() * (G.W - 100), s, ph: Math.random() * 6.28 };
+      if (ocean.water) {                                  // 水里漂浮
+        it.y = top + Math.random() * (bot - top); it.vx = (Math.random() - .5) * 14; it.vy = (Math.random() - .5) * 10; it.ang = (Math.random() - .5) * 0.35; it.va = (Math.random() - .5) * 0.2;
+      } else {                                            // 陆地：躺在地上
+        it.rest = sandTop() - s * 0.16 - Math.random() * G.H * 0.015;
+        it.y = it.rest; it.vx = (Math.random() - .5) * 6; it.vy = 0; it.ang = (Math.random() - .5) * 0.5; it.va = 0; it.spin = (Math.random() - .5) * 0.2;
+      }
+      ocean.items.push(it);
     }
   }
   function newFish() {
@@ -133,6 +142,17 @@
     const n = DATA.BINS.length, pad = 8, gap = 8, w = (G.W - pad * 2 - gap * (n - 1)) / n, h = binH(), y = binsTop();
     return DATA.BINS.map((b, i) => ({ bin: b, x: pad + i * (w + gap), y, w, h }));
   }
+  function lvUnlocked(idx) { return idx === 0 || !!G.save.cleared[DATA.LEVELS[idx - 1].id]; }
+  function completeLevel() {
+    const idx = DATA.LEVELS.findIndex(l => l.id === ocean.lv.id);
+    ocean.nextLv = DATA.LEVELS[idx + 1] || null;
+    ocean.firstClear = !G.save.cleared[ocean.lv.id];
+    G.save.cleared[ocean.lv.id] = true;
+    if (ocean.firstClear) { G.save.stars += 5; for (const k in DATA.MATERIALS) Eng.addMat(k, 1); }
+    else G.save.stars += 2;
+    Eng.persist(); ocean.justCleared = true;
+    Eng.burst(G.W / 2, G.H * 0.4, '#ffd34d', 26); Audio2.sfx('star'); Audio2.voice('level_clear');
+  }
 
   /* 陆地：小动物被垃圾惊扰 + 飘落粒子（叶/尘/雪）*/
   function updateLand(dt, top, bot) {
@@ -154,16 +174,19 @@
 
   function drawLandEnv(ctx, t) {
     const c = ocean.cfg, st = sandTop();
-    // 天空
-    const sg = ctx.createLinearGradient(0, 0, 0, st); sg.addColorStop(0, c.sky[0]); sg.addColorStop(1, c.sky[1]); ctx.fillStyle = sg; ctx.fillRect(0, 0, G.W, st);
-    // 太阳 + 云
-    ctx.fillStyle = 'rgba(255,238,150,.9)'; ctx.beginPath(); ctx.arc(G.W * 0.84, waterTop() + G.H * 0.04, G.H * 0.045, 0, 7); ctx.fill();
-    cloud(ctx, G.W * 0.2, waterTop() + G.H * 0.03, G.H * 0.028); cloud(ctx, G.W * 0.56, waterTop() + G.H * 0.06, G.H * 0.024);
-    // 地面
-    const gg = ctx.createLinearGradient(0, st, 0, G.H); gg.addColorStop(0, c.ground[0]); gg.addColorStop(1, c.ground[1]);
-    ctx.fillStyle = gg; ctx.beginPath(); ctx.moveTo(0, st); for (let x = 0; x <= G.W; x += 40) ctx.lineTo(x, st + Math.sin(x * 0.04 + 1) * 4); ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
-    // 装饰（树/楼/山，立在地面线）
-    ocean.decor.forEach(d => { ctx.save(); ctx.globalAlpha = 1; const dy = st - d.s * 0.34; Sprites.draw(ctx, d.k, d.x, dy, d.s, { rot: Math.sin(t * 0.6 + d.ph) * 0.015 }); ctx.restore(); });
+    if (c.indoor) { drawClassroomBg(ctx, st); }
+    else {
+      // 天空
+      const sg = ctx.createLinearGradient(0, 0, 0, st); sg.addColorStop(0, c.sky[0]); sg.addColorStop(1, c.sky[1]); ctx.fillStyle = sg; ctx.fillRect(0, 0, G.W, st);
+      // 太阳 + 云
+      ctx.fillStyle = 'rgba(255,238,150,.9)'; ctx.beginPath(); ctx.arc(G.W * 0.84, waterTop() + G.H * 0.04, G.H * 0.045, 0, 7); ctx.fill();
+      cloud(ctx, G.W * 0.2, waterTop() + G.H * 0.03, G.H * 0.028); cloud(ctx, G.W * 0.56, waterTop() + G.H * 0.06, G.H * 0.024);
+      // 地面
+      const gg = ctx.createLinearGradient(0, st, 0, G.H); gg.addColorStop(0, c.ground[0]); gg.addColorStop(1, c.ground[1]);
+      ctx.fillStyle = gg; ctx.beginPath(); ctx.moveTo(0, st); for (let x = 0; x <= G.W; x += 40) ctx.lineTo(x, st + Math.sin(x * 0.04 + 1) * 4); ctx.lineTo(G.W, G.H); ctx.lineTo(0, G.H); ctx.fill();
+      // 装饰（树/楼/山，立在地面线）
+      ocean.decor.forEach(d => { ctx.save(); ctx.globalAlpha = 1; const dy = st - d.s * 0.34; Sprites.draw(ctx, d.k, d.x, dy, d.s, { rot: Math.sin(t * 0.6 + d.ph) * 0.015 }); ctx.restore(); });
+    }
     // 小动物
     ocean.critters.forEach(c2 => {
       const flip = c2.vx < 0 ? -1 : 1, sz = G.H * 0.085 * (c2.scared > 0.3 ? 1.06 : 1);
@@ -176,6 +199,41 @@
       if (p.kind === 'leaf') Sprites.draw(ctx, 'c_leaf', p.x, p.y, p.r * 3, { rot: p.rot, alpha: a });
       else { ctx.save(); ctx.globalAlpha = a * (p.kind === 'snow' ? 0.9 : 0.5); ctx.fillStyle = p.kind === 'snow' ? '#fff' : '#cdbfa0'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); ctx.restore(); }
     });
+  }
+
+  /* 学校：室内教室 */
+  function drawClassroomBg(ctx, st) {
+    const wt = waterTop();
+    // 墙
+    const wg = ctx.createLinearGradient(0, 0, 0, st); wg.addColorStop(0, '#fdf3d8'); wg.addColorStop(1, '#f1e1bb'); ctx.fillStyle = wg; ctx.fillRect(0, 0, G.W, st);
+    // 木地板
+    const fg = ctx.createLinearGradient(0, st, 0, G.H); fg.addColorStop(0, '#d4aa6c'); fg.addColorStop(1, '#b3884a'); ctx.fillStyle = fg; ctx.fillRect(0, st, G.W, G.H - st);
+    ctx.strokeStyle = 'rgba(120,80,40,.22)'; ctx.lineWidth = 2; for (let i = 1; i < 6; i++) { const y = st + i / 6 * (G.H - st); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(G.W, y); ctx.stroke(); }
+    ctx.fillStyle = '#caa066'; ctx.fillRect(0, st - 8, G.W, 8);     // 踢脚线
+    // 黑板
+    const bx = G.W * 0.16, bw = G.W * 0.4, by = wt + G.H * 0.02, bh = st - by - G.H * 0.18;
+    rr(ctx, bx - 9, by - 9, bw + 18, bh + 18, 8); ctx.fillStyle = '#9c6b3f'; ctx.fill();
+    rr(ctx, bx, by, bw, bh, 5); ctx.fillStyle = '#2f5d4a'; ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.font = 'bold ' + Math.round(bh * 0.3) + 'px "Comic Sans MS","PingFang SC",sans-serif';
+    ctx.fillText('A B C', bx + bw * 0.1, by + bh * 0.34); ctx.fillText('1 2 3  ♥', bx + bw * 0.1, by + bh * 0.72);
+    // 窗户 + 窗外阳光
+    const wx = G.W * 0.68, wy = wt + G.H * 0.02, ww = G.W * 0.2, wh = st - wy - G.H * 0.22;
+    rr(ctx, wx, wy, ww, wh, 6); ctx.fillStyle = '#aee3ff'; ctx.fill();
+    ctx.fillStyle = '#fff3a0'; ctx.beginPath(); ctx.arc(wx + ww * 0.72, wy + wh * 0.32, wh * 0.16, 0, 7); ctx.fill();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#cdb089'; rr(ctx, wx, wy, ww, wh, 6); ctx.stroke();
+    ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(wx + ww / 2, wy); ctx.lineTo(wx + ww / 2, wy + wh); ctx.moveTo(wx, wy + wh / 2); ctx.lineTo(wx + ww, wy + wh / 2); ctx.stroke();
+    // 时钟
+    const cx = G.W * 0.6, cy = wt + G.H * 0.055, cr = G.H * 0.045;
+    ctx.beginPath(); ctx.arc(cx, cy, cr, 0, 7); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 4; ctx.strokeStyle = '#8a96a3'; ctx.stroke();
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx, cy - cr * 0.6); ctx.moveTo(cx, cy); ctx.lineTo(cx + cr * 0.5, cy + cr * 0.1); ctx.stroke();
+    // 课桌
+    const dy = st - G.H * 0.015;
+    for (let i = 0; i < 3; i++) drawDesk(ctx, G.W * (0.2 + i * 0.3), dy, G.H * 0.12);
+  }
+  function drawDesk(ctx, x, y, s) {
+    ctx.fillStyle = '#9aa7b5'; ctx.fillRect(x - s * 0.5, y - s * 0.3, s * 0.1, s * 0.55); ctx.fillRect(x + s * 0.4, y - s * 0.3, s * 0.1, s * 0.55);
+    ctx.fillStyle = '#e6b97a'; rr(ctx, x - s * 0.62, y - s * 0.5, s * 1.24, s * 0.24, 5); ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#a87a40'; ctx.stroke();
   }
 
   ocean._down = function (x, y) {
@@ -198,7 +256,7 @@
   ocean._up = function (x, y) {
     const d = ocean.drag; ocean.drag = null; if (!d) return;
     const r = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - 24);
-    if (!r) { d.it.vx = (Math.random() - .5) * 20; d.it.vy = -10; return; }   // 没投进，松手继续漂
+    if (!r) { d.it.vx = (Math.random() - .5) * 20; d.it.vy = ocean.water ? -10 : -120; return; }   // 没投进：水里继续漂 / 陆地抛回落地
     const t = DATA.TRASH[d.it.id];
     if (t.bin === r.bin.id) {
       Audio2.sfx('good'); G.save.stars++;
@@ -211,6 +269,7 @@
       // 附近的小生灵开心地经过
       (ocean.water ? ocean.fish : ocean.critters).forEach(c => { if (Math.abs(c.x - (r.x + r.w / 2)) < 200) c.happy = 1; });
       Eng.persist();
+      if (ocean.items.length === 0 && !ocean.justCleared) completeLevel();   // 全清理完=通关
     } else {
       Audio2.sfx('bad'); ocean.shakeT = 0.45; d.it.vy = -30; d.it.vx = (Math.random() - .5) * 30;
       Eng.floatText(x, y - 20, '不是这个桶哦~', '#ff7675'); Audio2.voice('wrong');
@@ -220,13 +279,21 @@
   ocean.update = function (dt) {
     if (ocean.shakeT > 0) ocean.shakeT -= dt;
     const top = waterTop() + 10, bot = sandTop() - 6;
-    // 垃圾漂浮
+    // 垃圾：水里漂浮 / 陆地躺地上（重力）
     ocean.items.forEach(it => {
       if (ocean.drag && ocean.drag.it === it) return;
-      it.ph += dt; it.x += it.vx * dt; it.y += it.vy * dt + Math.sin(it.ph) * 4 * dt; it.ang += it.va * dt;
-      it.vx *= 0.99; it.vy *= 0.99;
-      if (it.x < 40) { it.x = 40; it.vx = Math.abs(it.vx); } if (it.x > G.W - 40) { it.x = G.W - 40; it.vx = -Math.abs(it.vx); }
-      if (it.y < top) { it.y = top; it.vy = Math.abs(it.vy); } if (it.y > bot) { it.y = bot; it.vy = -Math.abs(it.vy); }
+      it.ph += dt;
+      if (ocean.water) {
+        it.x += it.vx * dt; it.y += it.vy * dt + Math.sin(it.ph) * 4 * dt; it.ang += it.va * dt;
+        it.vx *= 0.99; it.vy *= 0.99;
+        if (it.x < 40) { it.x = 40; it.vx = Math.abs(it.vx); } if (it.x > G.W - 40) { it.x = G.W - 40; it.vx = -Math.abs(it.vx); }
+        if (it.y < top) { it.y = top; it.vy = Math.abs(it.vy); } if (it.y > bot) { it.y = bot; it.vy = -Math.abs(it.vy); }
+      } else {
+        it.vy += 900 * dt; it.y += it.vy * dt; it.x += it.vx * dt; it.vx *= 0.96;
+        if (it.y >= it.rest) { it.y = it.rest; it.vy = 0; it.vx *= 0.8; it.ang += (0 - it.ang) * Math.min(1, dt * 5); }
+        else { it.ang += (it.spin || 0) * dt; }
+        if (it.x < 40) { it.x = 40; it.vx = Math.abs(it.vx) * 0.4; } if (it.x > G.W - 40) { it.x = G.W - 40; it.vx = -Math.abs(it.vx) * 0.4; }
+      }
     });
     if (ocean.water) {
       // 小鱼：躲避垃圾（被垃圾干扰）
@@ -300,7 +367,7 @@
     // 垃圾（白色光晕托底，让图标清晰跳出 + 拖拽放大发光）
     ocean.items.forEach(it => {
       const drag = ocean.drag && ocean.drag.it === it;
-      const iy = it.y + (drag ? 0 : Math.sin(it.ph) * 4), sz = it.s * (drag ? 1.2 : 1);
+      const iy = it.y + ((drag || !ocean.water) ? 0 : Math.sin(it.ph) * 4), sz = it.s * (drag ? 1.2 : 1);
       // 柔光晕
       const hg = ctx.createRadialGradient(it.x + sh, iy, 0, it.x + sh, iy, sz * 0.62);
       hg.addColorStop(0, 'rgba(255,255,255,.5)'); hg.addColorStop(0.6, 'rgba(255,255,255,.18)'); hg.addColorStop(1, 'rgba(255,255,255,0)');
@@ -355,13 +422,36 @@
     const by = top + 6, bh = Math.max(40, G.H * 0.066);
     const back = { x: 10, y: by, w: bh * 1.4, h: bh, label: '◀', color: '#ff7675', fs: Math.round(bh * 0.5), onTap: () => Eng.go('menu') };
     const mute = { x: 10 + bh * 1.4 + 8, y: by, w: bh * 1.4, h: bh, label: Audio2.isMuted() ? '🔇' : '🔊', color: '#74b9ff', fs: Math.round(bh * 0.42), onTap: () => { Audio2.setMuted(!Audio2.isMuted()); mute.label = Audio2.isMuted() ? '🔇' : '🔊'; } };
-    const refresh = { x: G.W - 10 - (bh * 4.6) - 8 - bh * 3.2, y: by, w: bh * 3.2, h: bh, label: '🔄 刷新海域', color: '#48a0d8', fs: Math.round(bh * 0.34), onTap: () => { spawnTrash(16); Audio2.sfx('splash'); Eng.floatText(G.W / 2, G.H * 0.3, '又漂来好多垃圾!', '#fff'); } };
+    const refresh = { x: G.W - 10 - (bh * 4.6) - 8 - bh * 3.2, y: by, w: bh * 3.2, h: bh, label: ocean.water ? '🔄 刷新海域' : '🔄 刷新场地', color: '#48a0d8', fs: Math.round(bh * 0.34), onTap: () => { ocean.justCleared = false; spawnTrash(16); Audio2.sfx('splash'); Eng.floatText(G.W / 2, G.H * 0.3, ocean.water ? '又漂来好多垃圾!' : '又出现好多垃圾!', '#fff'); } };
     const build = { x: G.W - 10 - bh * 4.6, y: by, w: bh * 4.6, h: bh, label: '🔨 建造乐园', color: '#27ae60', fs: Math.round(bh * 0.34), onTap: () => Eng.openCraft() };
     ocean.buttons.push(back, mute, refresh, build); btn(ctx, back); btn(ctx, mute); btn(ctx, refresh); btn(ctx, build);
 
-    // 剩余提示
-    if (ocean.items.length === 0) { ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(G.H * 0.04) + 'px "PingFang SC",sans-serif'; ctx.fillText('海里干净啦! 点「刷新海域」再清理，或去「建造乐园」', G.W / 2, (waterTop() + sandTop()) / 2); }
+    // 通关结算面板
+    if (ocean.justCleared) drawClearPanel(ctx);
   };
+
+  function drawClearPanel(ctx) {
+    ctx.save(); ctx.fillStyle = 'rgba(0,0,0,.45)'; ctx.fillRect(0, 0, G.W, G.H); ctx.restore();
+    const pw = Math.min(G.W * 0.78, 580), ph = Math.min(G.H * 0.6, 420), px = (G.W - pw) / 2, py = (G.H - ph) / 2;
+    rr(ctx, px, py, pw, ph, 26); ctx.fillStyle = '#fffef7'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#ffd34d'; ctx.stroke();
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#27ae60'; ctx.font = 'bold ' + Math.round(ph * 0.13) + 'px "PingFang SC",sans-serif';
+    ctx.fillText('🎉 ' + ocean.lv.name + '清理干净啦!', G.W / 2, py + ph * 0.2);
+    ctx.fillStyle = '#e67e22'; ctx.font = 'bold ' + Math.round(ph * 0.075) + 'px "PingFang SC",sans-serif';
+    ctx.fillText(ocean.firstClear ? '⭐ +5   每种材料 +1' : '⭐ +2   又干净啦!', G.W / 2, py + ph * 0.38);
+    if (ocean.firstClear && ocean.nextLv) { ctx.fillStyle = '#2e86de'; ctx.font = 'bold ' + Math.round(ph * 0.065) + 'px "PingFang SC",sans-serif'; ctx.fillText('🔓 解锁新地点：' + ocean.nextLv.name + ' ' + ocean.nextLv.icon, G.W / 2, py + ph * 0.5); }
+    const bw = pw * 0.42, bh2 = ph * 0.16, gap = pw * 0.04, by2 = py + ph * 0.62;
+    if (ocean.nextLv) {
+      const nb = { x: G.W / 2 - bw - gap / 2, y: by2, w: bw, h: bh2, label: '➡️ 去' + ocean.nextLv.name, color: '#2e86de', fs: Math.round(bh2 * 0.34), onTap: () => Eng.go('ocean', ocean.nextLv) };
+      const rb = { x: G.W / 2 + gap / 2, y: by2, w: bw, h: bh2, label: '🔄 再清理', color: '#27ae60', fs: Math.round(bh2 * 0.34), onTap: () => { ocean.justCleared = false; spawnTrash(16); } };
+      ocean.buttons.push(nb, rb); btn(ctx, nb); btn(ctx, rb);
+    } else {
+      const rb = { x: G.W / 2 - bw / 2, y: by2, w: bw, h: bh2, label: '🔄 再清理', color: '#27ae60', fs: Math.round(bh2 * 0.34), onTap: () => { ocean.justCleared = false; spawnTrash(16); } };
+      ocean.buttons.push(rb); btn(ctx, rb);
+    }
+    const mb = { x: G.W / 2 - bw / 2, y: by2 + bh2 + gap, w: bw, h: bh2, label: '🏠 回菜单', color: '#ff9f43', fs: Math.round(bh2 * 0.34), onTap: () => Eng.go('menu') };
+    ocean.buttons.push(mb); btn(ctx, mb);
+  }
 
   /* ---------- 小工具 ---------- */
   function muteBtn(scene, ctx, hidden) {
