@@ -21,7 +21,8 @@ window.Game = (function () {
       tentPlaced: [],        // 旧版帐篷布置（已迁移到 homes['1'].rooms.living）
       homes: { '1': { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } } }, // 每顶帐篷=一个家，各有风格+4房间
       homeSeq: 2,            // 新帐篷家 id 自增
-      weather: 0,            // 乐园天气 0晴 1多云 2雨 3雪
+      weather: 0,            // (旧)乐园天气，已由 season 取代
+      season: 1,             // 乐园季节 0春 1夏 2秋 3冬
       night: false,          // 乐园昼夜
       adaPos: {},            // Ada 公主位置 {park:{x,y}, tent:{x,y}}（可拖动+自己溜达）
       placeSeq: 1,           // 摆放项唯一 id 自增

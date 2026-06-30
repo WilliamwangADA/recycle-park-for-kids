@@ -168,6 +168,25 @@
     ctx.fillStyle = '#e84393'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.62) + 'px "PingFang SC",sans-serif';
     ctx.fillText('👑 Ada 公主', x, ly + lh / 2 + 1);
   }
+  // 公主所在位置：从天而降的飘雪（冰雪公主光环）
+  function drawAdaSnow(ctx, x, y, size, t) {
+    ctx.save(); ctx.fillStyle = 'rgba(255,255,255,.92)';
+    for (let i = 0; i < 18; i++) {
+      const seed = i * 0.61803, fall = (t * 0.13 + seed) % 1;
+      const fx = x + ((seed * 7.3 % 1.8) - 0.9) * size + Math.sin(t * 1.2 + i) * size * 0.05;
+      const fy = y - size * 0.85 + fall * size * 1.5;
+      const a = Math.sin(fall * Math.PI);
+      ctx.globalAlpha = 0.85 * a; ctx.beginPath(); ctx.arc(fx, fy, size * 0.018 * (0.7 + (i % 3) * 0.3), 0, 7); ctx.fill();
+    }
+    ctx.restore();
+  }
+  // 夜空烟花
+  function drawFireworks(ctx, S) {
+    (S.fw || []).forEach(p => {
+      if (p.type === 'rocket') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + 22); ctx.stroke(); }
+      else { const k = 1 - p.age / p.life; ctx.save(); ctx.globalAlpha = Math.max(0, k); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 5 * k + 1.5, 0, 7); ctx.fill(); ctx.restore(); }
+    });
+  }
 
   /* =======================================================================
      世界背景：乐园(昼夜/天气/河流小鸭小鱼) / 帐篷房间(风格+功能)
@@ -176,21 +195,24 @@
   function flower(ctx, x, y, r, c) { for (let k = 0; k < 5; k++) { const a = k * 1.2566; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.72, 0, 7); ctx.fillStyle = c; ctx.fill(); } ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, 7); ctx.fillStyle = '#fff3a0'; ctx.fill(); }
   function grassTuft(ctx, x, y, h) { ctx.strokeStyle = '#4ca64c'; ctx.lineWidth = h * 0.16; ctx.lineCap = 'round'; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(x + k * h * 0.18, y); ctx.quadraticCurveTo(x + k * h * 0.42, y - h * 0.7, x + k * h * 0.55, y - h); ctx.stroke(); } }
 
+  const SEASON_SKY = [['#bfe8ff', '#e9f8ec'], ['#9fd8ff', '#dff6ec'], ['#d6e6ee', '#f4ead4'], ['#cfe0ea', '#eef4f6']];
+  const SEASON_GRASS = [['#bfe86a', '#8fcf52'], ['#a6e36a', '#79c047'], ['#d8c46a', '#b89a48'], ['#e3eef0', '#c3d6dc']];
+  const SEASON_HILL = ['#9ad27a', '#9ad27a', '#c4ab58', '#d3e4e8'];
   function parkWorldBg(ctx, WW, WH, S) {
-    const night = G.save.night, weather = G.save.weather, riverY = WH * 0.66;
+    const night = G.save.night, season = (G.save.season | 0) % 4, riverY = WH * 0.66;
     const sky = ctx.createLinearGradient(0, 0, 0, WH * 0.44);
-    if (night) { sky.addColorStop(0, '#1b2a4a'); sky.addColorStop(1, '#3c4f72'); }
-    else if (weather >= 2) { sky.addColorStop(0, '#9fb4c4'); sky.addColorStop(1, '#d3dde3'); }
-    else { sky.addColorStop(0, '#9fd8ff'); sky.addColorStop(1, '#dff6ec'); }
+    if (night) { sky.addColorStop(0, '#16223f'); sky.addColorStop(1, '#33456a'); }
+    else { sky.addColorStop(0, SEASON_SKY[season][0]); sky.addColorStop(1, SEASON_SKY[season][1]); }
     ctx.fillStyle = sky; ctx.fillRect(0, 0, WW, WH * 0.44);
     if (night) {
       ctx.fillStyle = '#fdf6c0'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.1, WH * 0.045, 0, 7); ctx.fill();
-      ctx.fillStyle = night && !weather ? 'rgba(27,42,74,1)' : 'rgba(60,79,114,1)'; ctx.beginPath(); ctx.arc(WW * 0.835, WH * 0.088, WH * 0.04, 0, 7); ctx.fill();
+      ctx.fillStyle = '#1a2742'; ctx.beginPath(); ctx.arc(WW * 0.835, WH * 0.088, WH * 0.04, 0, 7); ctx.fill();
       ctx.fillStyle = '#fff'; for (let i = 0; i < 46; i++) { const x = (i * 167.3) % WW, y = (i * 51.7) % (WH * 0.4); ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(G.t * 1.5 + i)); ctx.fillRect(x, y, 2.4, 2.4); } ctx.globalAlpha = 1;
     } else { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.1, WH * 0.05, 0, 7); ctx.fill(); }
-    const nc = weather >= 1 ? 5 : 3; for (let i = 0; i < nc; i++) cloud2(ctx, (WW * (0.12 + i * 0.2) + Math.sin(G.t * 0.08 + i) * 30) % WW, WH * (0.08 + (i % 2) * 0.05), WH * (weather >= 1 ? 0.04 : 0.03));
-    ctx.fillStyle = night ? '#3c5a48' : '#9ad27a'; for (let i = 0; i < 5; i++) { const cx = WW * (0.08 + i * 0.22); ctx.beginPath(); ctx.moveTo(cx - WW * 0.16, WH * 0.44); ctx.quadraticCurveTo(cx, WH * 0.44 - WH * 0.14, cx + WW * 0.16, WH * 0.44); ctx.fill(); }
-    const gr = ctx.createLinearGradient(0, WH * 0.42, 0, WH); if (night) { gr.addColorStop(0, '#4f8a4a'); gr.addColorStop(1, '#356030'); } else { gr.addColorStop(0, '#a6e36a'); gr.addColorStop(1, '#79c047'); } ctx.fillStyle = gr; ctx.fillRect(0, WH * 0.42, WW, WH * 0.58);
+    for (let i = 0; i < 3; i++) cloud2(ctx, (WW * (0.14 + i * 0.22) + Math.sin(G.t * 0.08 + i) * 30) % WW, WH * (0.08 + (i % 2) * 0.05), WH * 0.032);
+    ctx.fillStyle = night ? '#3c5a48' : SEASON_HILL[season]; for (let i = 0; i < 5; i++) { const cx = WW * (0.08 + i * 0.22); ctx.beginPath(); ctx.moveTo(cx - WW * 0.16, WH * 0.44); ctx.quadraticCurveTo(cx, WH * 0.44 - WH * 0.14, cx + WW * 0.16, WH * 0.44); ctx.fill(); }
+    const gr = ctx.createLinearGradient(0, WH * 0.42, 0, WH); if (night) { gr.addColorStop(0, '#4f8a4a'); gr.addColorStop(1, '#356030'); } else { gr.addColorStop(0, SEASON_GRASS[season][0]); gr.addColorStop(1, SEASON_GRASS[season][1]); } ctx.fillStyle = gr; ctx.fillRect(0, WH * 0.42, WW, WH * 0.58);
+    if (season === 3 && !night) { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 42; i++) { const x = (i * 231) % WW, y = WH * 0.46 + (i * 97) % (WH * 0.48); ctx.beginPath(); ctx.ellipse(x, y, 28, 11, 0, 0, 7); ctx.fill(); } }
     // 河流
     ctx.save(); ctx.lineCap = 'round';
     ctx.strokeStyle = night ? '#3a6b8a' : '#6fc3e8'; ctx.lineWidth = WH * 0.075; ctx.beginPath(); ctx.moveTo(-30, riverY); ctx.bezierCurveTo(WW * 0.28, riverY - WH * 0.07, WW * 0.5, riverY + WH * 0.13, WW * 0.74, riverY); ctx.lineTo(WW + 30, riverY + WH * 0.05); ctx.stroke();
@@ -300,7 +322,7 @@
 
     S.enter = function (arg) {
       if (opts.rooms) { S.homeId = (arg && arg.homeId) || S.homeId || '1'; if (!G.save.homes[S.homeId]) G.save.homes[S.homeId] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; S.room = (arg && arg.room) || 'living'; }
-      S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; S.rotTarget = null; S._pinchInit = false; S.wparts = [];
+      S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; S.rotTarget = null; S._pinchInit = false; S.wparts = []; S.fw = []; S.fwT = 1.5;
       migrate(); ensureBase(); genAmbient(); if (opts.river) initRiver(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice);
     };
     S.setRoom = function (rm) { if (S.room === rm) return; S.room = rm; S.drag = null; S.pan = null; S.rotTarget = null; centerCam(); Audio2.sfx('click'); };
@@ -314,17 +336,25 @@
     };
     S.onPinchEnd = function () { S._pinchInit = false; if (S.rotTarget) { Eng.persist(); S.rotTarget = null; } };
     S.update = function (dt) {
-      if (opts.ada && S.ada) {
-        const a = S.ada;
-        if (!(S.drag && S.drag.kind === 'ada')) {
-          a.wt -= dt;
-          if (a.wt <= 0) { a.tx = WW * 0.15 + Math.random() * WW * 0.7; a.ty = WH * (opts.rooms ? 0.6 : 0.5) + Math.random() * WH * 0.34; a.wt = 2.5 + Math.random() * 3.5; }
-          const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
-          if (d > 4) { const step = Math.min(d, 150 * dt); a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > 1) a.face = dx > 0 ? 1 : -1; a.moving = true; } else a.moving = false;
-        } else a.moving = false;
-      }
+      if (opts.ada && S.ada) S.ada.moving = false;            // 公主停在原地，不再自由走动
       if (opts.river && S.river) S.river.forEach(d => { d.x += d.vx * dt; d.ph += dt; if (d.x > WW + 60) d.x = -60; if (d.x < -60) d.x = WW + 60; });
-      if (opts.weather) { const w = G.save.weather; if (w >= 2) { const n = w === 2 ? Math.ceil(60 * dt) : Math.ceil(24 * dt); for (let k = 0; k < n; k++) S.wparts.push({ x: Math.random() * G.W, y: vTop() - 4, vy: w === 2 ? 760 : 130, r: 1.6 + Math.random() * 2, w: w }); for (let i = S.wparts.length - 1; i >= 0; i--) { const p = S.wparts[i]; p.y += p.vy * dt; p.x += p.w === 3 ? Math.sin((p.y + i) * 0.05) * 22 * dt : -70 * dt; if (p.y > vBot()) S.wparts.splice(i, 1); } } else if (S.wparts.length) S.wparts.length = 0; }
+      if (opts.weather) {                                     // 季节飘落：春花瓣 / 秋落叶 / 冬雪
+        const sp = ['petal', 'none', 'leaf', 'snow'][(G.save.season | 0) % 4];
+        if (sp !== 'none') {
+          const n = Math.ceil((sp === 'snow' ? 22 : sp === 'petal' ? 16 : 14) * dt);
+          for (let k = 0; k < n; k++) S.wparts.push({ x: Math.random() * G.W, y: vTop() - 6, vy: sp === 'snow' ? 130 : sp === 'petal' ? 95 : 115, r: 2 + Math.random() * 2.5, kind: sp, rot: Math.random() * 6.28, vr: (Math.random() - .5) * 4, ph: Math.random() * 6.28 });
+          for (let i = S.wparts.length - 1; i >= 0; i--) { const p = S.wparts[i]; p.y += p.vy * dt; p.x += Math.sin((p.y + p.ph) * 0.04) * 24 * dt; p.rot += p.vr * dt; if (p.y > vBot()) S.wparts.splice(i, 1); }
+        } else if (S.wparts.length) S.wparts.length = 0;
+      }
+      if (opts.fireworks && G.save.night) {                   // 夜空烟花（屏幕坐标，永远可见）
+        const vt = vTop(), vb = vBot(), vh = vb - vt;
+        S.fwT -= dt;
+        if (S.fwT <= 0) { S.fwT = 0.9 + Math.random() * 1.8; const cols = ['#ff6b6b', '#feca57', '#54a0ff', '#1dd1a1', '#ff9ff3', '#fff7a0']; S.fw.push({ type: 'rocket', x: G.W * (0.12 + Math.random() * 0.76), y: vb - 8, vy: -(vh * 1.25 + Math.random() * vh * 0.35), ay: vh * 1.6, color: cols[(Math.random() * cols.length) | 0] }); }
+        for (let i = S.fw.length - 1; i >= 0; i--) { const p = S.fw[i];
+          if (p.type === 'rocket') { p.y += p.vy * dt; p.vy += p.ay * dt; if (p.vy >= -vh * 0.08) { const N = 28; for (let q = 0; q < N; q++) { const a2 = q / N * 6.283, sp2 = vh * (0.35 + Math.random() * 0.25); S.fw.push({ type: 'spark', x: p.x, y: p.y, vx: Math.cos(a2) * sp2, vy: Math.sin(a2) * sp2, age: 0, life: 1 + Math.random() * 0.6, color: p.color }); } S.fw.splice(i, 1); Audio2.sfx('star'); } }
+          else { p.age += dt; p.x += p.vx * dt; p.y += p.vy * dt; p.vy += vh * 0.55 * dt; if (p.age > p.life) S.fw.splice(i, 1); }
+        }
+      } else if (opts.fireworks && S.fw && S.fw.length) S.fw.length = 0;
     };
 
     S.down = function (x, y) {
@@ -400,7 +430,7 @@
         if (home) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; const lw = ds * 0.66, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5; rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.6) + 'px "PingFang SC",sans-serif'; ctx.fillText('🚪 点我进去', p.x, ly + lh / 2); }
       });
       if (S.drag && S.drag.item && DATA.ITEMS[S.drag.item] && DATA.ITEMS[S.drag.item].onTop) { const wp = s2w(S.drag.scrX, S.drag.scrY); const surf = surfaceAt(wp.x, wp.y, S.drag.kind === 'placed' ? S.drag.p : null); if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w2 = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w2, surfaceTopY(surf) - 7, w2 * 2, 14); ctx.restore(); } }
-      if (opts.ada && S.ada) { const sz = adaSize(), dragging = S.drag && S.drag.kind === 'ada'; const hop = (S.ada.moving || dragging) ? Math.abs(Math.sin(G.t * 9)) * sz * 0.05 : 0; drawAda(ctx, S.ada.x, S.ada.y, sz, S.ada.face, hop); }
+      if (opts.ada && S.ada) { const sz = adaSize(), dragging = S.drag && S.drag.kind === 'ada'; const hop = dragging ? Math.abs(Math.sin(G.t * 9)) * sz * 0.05 : 0; drawAda(ctx, S.ada.x, S.ada.y, sz, S.ada.face, hop); drawAdaSnow(ctx, S.ada.x, S.ada.y, sz, G.t); }
       ctx.restore();
 
       if (opts.afterDraw) opts.afterDraw(ctx, S);
@@ -436,14 +466,22 @@
 
   /* —— 乐园 —— */
   const park = makePlacement({
-    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 2600, worldH: 1500, river: true, weather: true,
+    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 2600, worldH: 1500, river: true, weather: true, fireworks: true,
     hint: '拖空地平移 · 双指/滚轮缩放 · 双指转物品 · 拖到🗑删除 · 点帐篷进去',
     afterDraw: (ctx, S) => {
-      const w = G.save.weather; if (w < 2 || !S.wparts || !S.wparts.length) return;
       const vt = Math.max(46, G.H * 0.075) + 10 + G.H * 0.08, vb = G.H - G.H * 0.18;
       ctx.save(); ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
-      if (w === 2) { ctx.strokeStyle = 'rgba(165,200,235,.65)'; ctx.lineWidth = 2; ctx.lineCap = 'round'; S.wparts.forEach(p => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 5, p.y + 16); ctx.stroke(); }); }
-      else { ctx.fillStyle = 'rgba(255,255,255,.92)'; S.wparts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }); }
+      // 夜空烟花
+      if (G.save.night && S.fw) S.fw.forEach(p => {
+        if (p.type === 'rocket') { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.45)'; ctx.lineWidth = 2; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x, p.y + 15); ctx.stroke(); }
+        else { const k = 1 - p.age / p.life; ctx.save(); ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = Math.max(0, k); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 7 * k + 2, 0, 7); ctx.fill(); ctx.restore(); }
+      });
+      // 季节飘落
+      if (S.wparts) S.wparts.forEach(p => {
+        if (p.kind === 'snow') { ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+        else if (p.kind === 'petal') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = 'rgba(255,170,205,.92)'; ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.5, p.r * 0.8, 0, 0, 7); ctx.fill(); ctx.restore(); }
+        else { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = ['#e08a3a', '#d9a93a', '#c96a3a'][(p.ph * 3 | 0) % 3]; ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.6, p.r * 0.7, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(120,70,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-p.r * 1.4, 0); ctx.lineTo(p.r * 1.4, 0); ctx.stroke(); ctx.restore(); }
+      });
       ctx.restore();
     },
     nav: (S, ctx, bw, bh) => {
@@ -452,8 +490,8 @@
       S.buttons.push(ob, cb); btn(ctx, ob); btn(ctx, cb);
       const s = Math.max(40, G.H * 0.07), by = (G.H - G.H * 0.18) - s - 8;
       const nb = { x: 12, y: by, w: s, h: s, label: G.save.night ? '🌙' : '☀️', color: '#7e8cc4', fs: Math.round(s * 0.45), onTap: () => { G.save.night = !G.save.night; Eng.persist(); } };
-      const wl = ['☀️', '☁️', '🌧️', '❄️'], wb = { x: 12 + s + 8, y: by, w: s, h: s, label: wl[G.save.weather], color: '#6fb7d8', fs: Math.round(s * 0.45), onTap: () => { G.save.weather = (G.save.weather + 1) % 4; Eng.persist(); } };
-      S.buttons.push(nb, wb); btn(ctx, nb); btn(ctx, wb);
+      const sl = ['🌸', '🌻', '🍂', '⛄'], sb = { x: 12 + s + 8, y: by, w: s, h: s, label: sl[(G.save.season | 0) % 4], color: '#6fb87a', fs: Math.round(s * 0.45), onTap: () => { G.save.season = ((G.save.season | 0) + 1) % 4; Eng.persist(); Eng.floatText(G.W / 2, G.H * 0.4, ['🌸 春天来啦', '🌻 夏天到啦', '🍂 秋天到啦', '⛄ 冬天到啦'][G.save.season], '#27ae60'); } };
+      S.buttons.push(nb, sb); btn(ctx, nb); btn(ctx, sb);
     },
   });
 
