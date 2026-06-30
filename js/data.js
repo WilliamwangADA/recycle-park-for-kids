@@ -87,7 +87,48 @@ window.DATA = (function () {
     swing:    { name: '秋千',   sprite: 'i_swing',    cost: { metal: 3, rubber: 2 },     charm: 6, scale: 1.5 },
     slide:    { name: '滑梯',   sprite: 'i_slide',    cost: { plastic: 4, metal: 2 },    charm: 8, scale: 1.6 },
     bike:     { name: '自行车', sprite: 'i_bike',     cost: { metal: 4, rubber: 2 },     charm: 7, scale: 1.2 },
-    tent:     { name: '帐篷',   sprite: 'i_tent',     cost: { plastic: 2, paper: 3 },    charm: 7, scale: 1.55 },
+    tent:     { name: '帐篷',   sprite: 'i_tent',     cost: { plastic: 2, paper: 3 },    charm: 7, scale: 1.55, home: true },
+
+    // —— 客厅 / 家居 ——
+    sofa:     { name: '沙发',   sprite: 'i_sofa',     cost: { wood: 3, rubber: 2 },      charm: 5, scale: 1.3, surface: true, room: 'living' },
+    tv:       { name: '电视',   sprite: 'i_tv',       cost: { plastic: 3, glass: 2 },    charm: 5, scale: 1.0, room: 'living' },
+    books:    { name: '书架',   sprite: 'i_books',    cost: { wood: 2, paper: 2 },       charm: 4, scale: 1.0, surface: true, room: 'living' },
+    picture:  { name: '挂画',   sprite: 'i_picture',  cost: { paper: 1, wood: 1 },       charm: 2, scale: 0.55, room: 'living' },
+    clock:    { name: '座钟',   sprite: 'i_clock',    cost: { metal: 1, glass: 1 },      charm: 2, scale: 0.55, onTop: true, room: 'living' },
+    candle:   { name: '蜡烛',   sprite: 'i_candle',   cost: { wood: 1 },                 charm: 2, scale: 0.4,  onTop: true, room: 'living' },
+    vase:     { name: '花瓶',   sprite: 'i_vase',     cost: { glass: 1, paper: 1 },      charm: 3, scale: 0.5,  onTop: true, room: 'living' },
+    guitar:   { name: '吉他',   sprite: 'i_guitar',   cost: { wood: 2, plastic: 1 },     charm: 4, scale: 0.95, room: 'living' },
+    piano:    { name: '钢琴',   sprite: 'i_piano',    cost: { wood: 4, metal: 2 },       charm: 7, scale: 1.2, room: 'living' },
+    lantern:  { name: '灯笼',   sprite: 'i_lantern',  cost: { paper: 1, metal: 1 },      charm: 3, scale: 0.6,  room: 'living' },
+    // —— 厨房 ——
+    pan:      { name: '煎锅',   sprite: 'i_pan',      cost: { metal: 1 },                charm: 2, scale: 0.5,  onTop: true, room: 'kitchen' },
+    pot:      { name: '汤锅',   sprite: 'i_pot',      cost: { metal: 2 },                charm: 2, scale: 0.55, onTop: true, room: 'kitchen' },
+    cake:     { name: '蛋糕',   sprite: 'i_cake',     cost: { paper: 1, glass: 1 },      charm: 3, scale: 0.5,  onTop: true, room: 'kitchen' },
+    watermelon:{ name: '西瓜',  sprite: 'i_watermelon',cost: { glass: 1 },               charm: 2, scale: 0.55, onTop: true, room: 'kitchen' },
+    strawberry:{ name: '草莓',  sprite: 'i_strawberry',cost: { glass: 1 },               charm: 2, scale: 0.42, onTop: true, room: 'kitchen' },
+    fork:     { name: '餐具',   sprite: 'i_fork',     cost: { metal: 1 },                charm: 1, scale: 0.42, onTop: true, room: 'kitchen' },
+    // —— 卧室 ——
+    bed:      { name: '小床',   sprite: 'i_bed',      cost: { wood: 4, paper: 2 },       charm: 6, scale: 1.5, surface: true, room: 'bedroom' },
+    teddy:    { name: '泰迪熊', sprite: 'i_teddy',    cost: { paper: 2 },                charm: 4, scale: 0.7,  onTop: true, room: 'bedroom' },
+    mirror:   { name: '镜子',   sprite: 'i_mirror',   cost: { glass: 2, wood: 1 },       charm: 3, scale: 0.9, room: 'bedroom' },
+    alarm:    { name: '闹钟',   sprite: 'i_alarm',    cost: { metal: 1, glass: 1 },      charm: 2, scale: 0.42, onTop: true, room: 'bedroom' },
+    cactus:   { name: '仙人掌', sprite: 'i_cactus',   cost: { glass: 1 },                charm: 2, scale: 0.65, room: 'bedroom' },
+    // —— 厕所 ——
+    toilet:   { name: '马桶',   sprite: 'i_toilet',   cost: { plastic: 3, glass: 1 },    charm: 3, scale: 0.95, room: 'bathroom' },
+    bathtub:  { name: '浴缸',   sprite: 'i_bathtub',  cost: { plastic: 4, glass: 2 },    charm: 5, scale: 1.4, surface: true, room: 'bathroom' },
+    shower:   { name: '淋浴',   sprite: 'i_shower',   cost: { metal: 2, plastic: 2 },    charm: 4, scale: 1.0, room: 'bathroom' },
+    soap:     { name: '香皂',   sprite: 'i_soap',     cost: { plastic: 1 },              charm: 1, scale: 0.4,  onTop: true, room: 'bathroom' },
+    toothbrush:{ name: '牙刷',  sprite: 'i_toothbrush',cost: { plastic: 1 },             charm: 1, scale: 0.4,  onTop: true, room: 'bathroom' },
+    // —— 玩具 / 装饰 ——
+    gift:     { name: '礼物',   sprite: 'i_gift',     cost: { paper: 2 },                charm: 3, scale: 0.55, onTop: true },
+    car:      { name: '玩具车', sprite: 'i_car',      cost: { plastic: 2, rubber: 1 },   charm: 3, scale: 0.6 },
+    robot:    { name: '机器人', sprite: 'i_robot',    cost: { metal: 2, plastic: 1 },    charm: 4, scale: 0.7 },
+    ball:     { name: '皮球',   sprite: 'i_ball',     cost: { rubber: 1 },               charm: 2, scale: 0.5 },
+    trophy:   { name: '奖杯',   sprite: 'i_trophy',   cost: { metal: 2, glass: 1 },      charm: 4, scale: 0.5,  onTop: true },
+    sunflower:{ name: '向日葵', sprite: 'i_sunflower',cost: { paper: 1 },                charm: 3, scale: 0.7 },
+    rose:     { name: '玫瑰',   sprite: 'i_rose',     cost: { paper: 1 },                charm: 2, scale: 0.45, onTop: true },
+    xmastree: { name: '圣诞树', sprite: 'i_xmastree', cost: { wood: 3, glass: 2 },       charm: 7, scale: 1.5 },
+    snowman:  { name: '雪人',   sprite: 'i_snowman',  cost: { glass: 2 },                charm: 4, scale: 1.0 },
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */

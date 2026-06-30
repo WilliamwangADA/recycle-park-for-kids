@@ -1,7 +1,7 @@
 /* ===========================================================================
-   场景：回收造物 / 装饰乐园 / 帐篷内部
-   乐园与帐篷共用一套「世界摆放引擎」：支持相机平移(拖动)+缩放(双指/滚轮)，
-   更大的世界、天空/河流/花草、Ada 公主可拖放、帐篷更大更多布置元素。
+   场景：回收造物 / 装饰乐园 / 帐篷内部（多帐篷·多房间）
+   世界摆放引擎：相机平移+缩放、双指旋转物品、昼夜/天气、河里小鸭小鱼、
+   每顶帐篷=一个家(各有风格)，进去有 客厅/卧室/厨房/厕所 四个房间可布置。
    =========================================================================== */
 (function () {
   const Eng = window.Game, G = Eng.G;
@@ -95,7 +95,7 @@
       const frac = -craft.scrollY / craftMaxScroll, thumbH = Math.max(40, trackH * 0.35);
       const thy = trackY + frac * (trackH - thumbH);
       ctx.strokeStyle = '#e6913a'; ctx.beginPath(); ctx.moveTo(tx, thy); ctx.lineTo(tx, thy + thumbH); ctx.stroke();
-      if (frac < 0.85) { ctx.fillStyle = 'rgba(230,126,34,.8)'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(G.H * 0.026) + 'px "PingFang SC",sans-serif'; ctx.fillText('↓ 下滑看更多 ↓', G.W / 2, G.H - bh - 40); }
+      if (frac < 0.9) { ctx.fillStyle = 'rgba(230,126,34,.8)'; ctx.textAlign = 'center'; ctx.font = 'bold ' + Math.round(G.H * 0.026) + 'px "PingFang SC",sans-serif'; ctx.fillText('↓ 下滑看更多 ↓', G.W / 2, G.H - bh - 40); }
     }
 
     const barY = G.H - bh - 26;
@@ -127,7 +127,8 @@
      ======================================================================= */
   function recomputePop(silent) {
     let pop = 0;
-    G.save.placed.concat(G.save.tentPlaced).forEach(p => { pop += (DATA.ITEMS[p.item] ? DATA.ITEMS[p.item].charm : 0); });
+    G.save.placed.forEach(p => { pop += (DATA.ITEMS[p.item] ? DATA.ITEMS[p.item].charm : 0); });
+    for (const hid in G.save.homes) for (const rm in G.save.homes[hid].rooms) G.save.homes[hid].rooms[rm].forEach(p => { pop += (DATA.ITEMS[p.item] ? DATA.ITEMS[p.item].charm : 0); });
     G.save.popularity = pop;
     DATA.VISITORS.forEach(v => {
       if (pop >= v.need && !G.save.visitors[v.id]) {
@@ -140,7 +141,7 @@
   function VISBAR_RIGHT() { return Math.min(G.W * 0.2, 156) * 2 + 34; }
   function drawVisitorBar(ctx) {
     const s = Math.max(46, G.H * 0.075), pad = 10, y = 12, h = G.H * 0.075;
-    const bx = pad + s + 60;
+    const bx = pad + s * 3 + 24;
     const bw = G.W - bx - VISBAR_RIGHT();
     rr(ctx, bx, y, Math.max(120, bw), h, 14); ctx.fillStyle = 'rgba(255,255,255,.8)'; ctx.fill();
     ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
@@ -169,60 +170,86 @@
   }
 
   /* =======================================================================
-     世界背景：乐园(天空/远山/草地/河流/花草) / 帐篷内部(更大更多元素)
+     世界背景：乐园(昼夜/天气/河流小鸭小鱼) / 帐篷房间(风格+功能)
      ======================================================================= */
   function cloud2(ctx, x, y, r) { ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.arc(x + r, y + r * 0.2, r * 0.8, 0, 7); ctx.arc(x - r, y + r * 0.2, r * 0.8, 0, 7); ctx.fill(); }
   function flower(ctx, x, y, r, c) { for (let k = 0; k < 5; k++) { const a = k * 1.2566; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r, y + Math.sin(a) * r, r * 0.72, 0, 7); ctx.fillStyle = c; ctx.fill(); } ctx.beginPath(); ctx.arc(x, y, r * 0.6, 0, 7); ctx.fillStyle = '#fff3a0'; ctx.fill(); }
   function grassTuft(ctx, x, y, h) { ctx.strokeStyle = '#4ca64c'; ctx.lineWidth = h * 0.16; ctx.lineCap = 'round'; for (let k = -1; k <= 1; k++) { ctx.beginPath(); ctx.moveTo(x + k * h * 0.18, y); ctx.quadraticCurveTo(x + k * h * 0.42, y - h * 0.7, x + k * h * 0.55, y - h); ctx.stroke(); } }
 
   function parkWorldBg(ctx, WW, WH, S) {
-    const sky = ctx.createLinearGradient(0, 0, 0, WH * 0.44); sky.addColorStop(0, '#9fd8ff'); sky.addColorStop(1, '#dff6ec'); ctx.fillStyle = sky; ctx.fillRect(0, 0, WW, WH * 0.44);
-    ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.1, WH * 0.05, 0, 7); ctx.fill();
-    cloud2(ctx, WW * 0.18, WH * 0.1, WH * 0.035); cloud2(ctx, WW * 0.46, WH * 0.07, WH * 0.03); cloud2(ctx, WW * 0.66, WH * 0.13, WH * 0.028);
-    ctx.fillStyle = '#9ad27a'; for (let i = 0; i < 5; i++) { const cx = WW * (0.08 + i * 0.22); ctx.beginPath(); ctx.moveTo(cx - WW * 0.16, WH * 0.44); ctx.quadraticCurveTo(cx, WH * 0.44 - WH * 0.14, cx + WW * 0.16, WH * 0.44); ctx.fill(); }
-    const gr = ctx.createLinearGradient(0, WH * 0.42, 0, WH); gr.addColorStop(0, '#a6e36a'); gr.addColorStop(1, '#79c047'); ctx.fillStyle = gr; ctx.fillRect(0, WH * 0.42, WW, WH * 0.58);
-    // 河流(蜿蜒) + 高光
+    const night = G.save.night, weather = G.save.weather, riverY = WH * 0.66;
+    const sky = ctx.createLinearGradient(0, 0, 0, WH * 0.44);
+    if (night) { sky.addColorStop(0, '#1b2a4a'); sky.addColorStop(1, '#3c4f72'); }
+    else if (weather >= 2) { sky.addColorStop(0, '#9fb4c4'); sky.addColorStop(1, '#d3dde3'); }
+    else { sky.addColorStop(0, '#9fd8ff'); sky.addColorStop(1, '#dff6ec'); }
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, WW, WH * 0.44);
+    if (night) {
+      ctx.fillStyle = '#fdf6c0'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.1, WH * 0.045, 0, 7); ctx.fill();
+      ctx.fillStyle = night && !weather ? 'rgba(27,42,74,1)' : 'rgba(60,79,114,1)'; ctx.beginPath(); ctx.arc(WW * 0.835, WH * 0.088, WH * 0.04, 0, 7); ctx.fill();
+      ctx.fillStyle = '#fff'; for (let i = 0; i < 46; i++) { const x = (i * 167.3) % WW, y = (i * 51.7) % (WH * 0.4); ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(G.t * 1.5 + i)); ctx.fillRect(x, y, 2.4, 2.4); } ctx.globalAlpha = 1;
+    } else { ctx.fillStyle = '#ffe066'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.1, WH * 0.05, 0, 7); ctx.fill(); }
+    const nc = weather >= 1 ? 5 : 3; for (let i = 0; i < nc; i++) cloud2(ctx, (WW * (0.12 + i * 0.2) + Math.sin(G.t * 0.08 + i) * 30) % WW, WH * (0.08 + (i % 2) * 0.05), WH * (weather >= 1 ? 0.04 : 0.03));
+    ctx.fillStyle = night ? '#3c5a48' : '#9ad27a'; for (let i = 0; i < 5; i++) { const cx = WW * (0.08 + i * 0.22); ctx.beginPath(); ctx.moveTo(cx - WW * 0.16, WH * 0.44); ctx.quadraticCurveTo(cx, WH * 0.44 - WH * 0.14, cx + WW * 0.16, WH * 0.44); ctx.fill(); }
+    const gr = ctx.createLinearGradient(0, WH * 0.42, 0, WH); if (night) { gr.addColorStop(0, '#4f8a4a'); gr.addColorStop(1, '#356030'); } else { gr.addColorStop(0, '#a6e36a'); gr.addColorStop(1, '#79c047'); } ctx.fillStyle = gr; ctx.fillRect(0, WH * 0.42, WW, WH * 0.58);
+    // 河流
     ctx.save(); ctx.lineCap = 'round';
-    ctx.strokeStyle = '#6fc3e8'; ctx.lineWidth = WH * 0.075; ctx.beginPath(); ctx.moveTo(-30, WH * 0.62); ctx.bezierCurveTo(WW * 0.28, WH * 0.54, WW * 0.5, WH * 0.8, WW * 0.74, WH * 0.66); ctx.lineTo(WW + 30, WH * 0.72); ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,.35)'; ctx.lineWidth = WH * 0.014; ctx.beginPath(); ctx.moveTo(-30, WH * 0.6); ctx.bezierCurveTo(WW * 0.28, WH * 0.52, WW * 0.5, WH * 0.78, WW * 0.74, WH * 0.64); ctx.lineTo(WW + 30, WH * 0.7); ctx.stroke();
+    ctx.strokeStyle = night ? '#3a6b8a' : '#6fc3e8'; ctx.lineWidth = WH * 0.075; ctx.beginPath(); ctx.moveTo(-30, riverY); ctx.bezierCurveTo(WW * 0.28, riverY - WH * 0.07, WW * 0.5, riverY + WH * 0.13, WW * 0.74, riverY); ctx.lineTo(WW + 30, riverY + WH * 0.05); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.3)'; ctx.lineWidth = WH * 0.013; ctx.beginPath(); ctx.moveTo(-30, riverY - WH * 0.02); ctx.bezierCurveTo(WW * 0.28, riverY - WH * 0.09, WW * 0.5, riverY + WH * 0.11, WW * 0.74, riverY - WH * 0.02); ctx.lineTo(WW + 30, riverY + WH * 0.03); ctx.stroke();
     ctx.restore();
+    // 河里小鸭/小鱼
+    (S.river || []).forEach(d => { const yy = d.y + Math.sin(d.ph * 2) * 6; if (d.kind === 'duck') { ctx.save(); ctx.translate(d.x, yy); if (d.vx < 0) ctx.scale(-1, 1); Sprites.draw(ctx, 'c_duck', 0, 0, 72); ctx.restore(); } else if (window.Marine) { ctx.save(); ctx.translate(d.x, yy); if (d.vx < 0) ctx.scale(-1, 1); Marine.fish(ctx, 0, 0, 52, G.t, d.ph, { body: d.col, fin: d.fin }); ctx.restore(); } });
     // 小路
-    ctx.strokeStyle = '#f0d9a8'; ctx.lineWidth = WH * 0.05; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(WW * 0.5, WH); ctx.quadraticCurveTo(WW * 0.42, WH * 0.62, WW * 0.56, WH * 0.46); ctx.stroke();
-    // 花草石散点
-    (S.ambient || []).forEach(a => { if (a.kind === 'flower') flower(ctx, a.x, a.y, a.r, a.c); else if (a.kind === 'grass') grassTuft(ctx, a.x, a.y, a.h); else { ctx.fillStyle = '#9aa7b5'; ctx.beginPath(); ctx.ellipse(a.x, a.y, a.r, a.r * 0.7, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(255,255,255,.18)'; ctx.beginPath(); ctx.ellipse(a.x - a.r * 0.3, a.y - a.r * 0.25, a.r * 0.4, a.r * 0.25, 0, 0, 7); ctx.fill(); } });
+    ctx.strokeStyle = night ? '#9c895f' : '#f0d9a8'; ctx.lineWidth = WH * 0.05; ctx.lineCap = 'round'; ctx.beginPath(); ctx.moveTo(WW * 0.5, WH); ctx.quadraticCurveTo(WW * 0.42, WH * 0.62, WW * 0.56, WH * 0.46); ctx.stroke();
+    // 花草石
+    (S.ambient || []).forEach(a => { if (a.kind === 'flower') flower(ctx, a.x, a.y, a.r, a.c); else if (a.kind === 'grass') grassTuft(ctx, a.x, a.y, a.h); else { ctx.fillStyle = '#9aa7b5'; ctx.beginPath(); ctx.ellipse(a.x, a.y, a.r, a.r * 0.7, 0, 0, 7); ctx.fill(); } });
+    if (night) { ctx.fillStyle = 'rgba(20,30,60,.3)'; ctx.fillRect(0, 0, WW, WH); }
   }
 
-  function tentWorldBg(ctx, WW, WH) {
-    const g = ctx.createLinearGradient(0, 0, 0, WH); g.addColorStop(0, '#ffe9c7'); g.addColorStop(1, '#eebd86'); ctx.fillStyle = g; ctx.fillRect(0, 0, WW, WH);
-    const peakX = WW / 2, peakY = WH * 0.03, floorY = WH * 0.62;
-    for (let i = 0; i <= 16; i++) { const fx = WW * (0.03 + i * 0.0588); ctx.globalAlpha = 0.15; ctx.strokeStyle = i % 2 ? '#e8915a' : '#fff0d6'; ctx.lineWidth = WW * 0.036; ctx.beginPath(); ctx.moveTo(peakX, peakY); ctx.lineTo(fx, floorY); ctx.stroke(); } ctx.globalAlpha = 1;
-    ctx.strokeStyle = 'rgba(150,95,50,.5)'; ctx.lineWidth = WH * 0.012; ctx.beginPath(); ctx.moveTo(peakX, peakY); ctx.lineTo(WW * 0.02, floorY); ctx.moveTo(peakX, peakY); ctx.lineTo(WW * 0.98, floorY); ctx.stroke();
-    // 彩灯串
-    ctx.strokeStyle = 'rgba(120,80,40,.35)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(WW * 0.1, WH * 0.15); ctx.quadraticCurveTo(WW * 0.5, WH * 0.25, WW * 0.9, WH * 0.15); ctx.stroke();
-    const lc = ['#ff6b6b', '#feca57', '#54a0ff', '#1dd1a1', '#ff9ff3']; for (let i = 0; i <= 12; i++) { const t = i / 12, x = WW * 0.1 + WW * 0.8 * t, y = WH * 0.15 + Math.sin(t * Math.PI) * WH * 0.1; ctx.beginPath(); ctx.arc(x, y, WH * 0.013, 0, 7); ctx.fillStyle = lc[i % lc.length]; ctx.fill(); }
-    // 窗户 + 阳光
-    [WW * 0.15, WW * 0.85].forEach(wx => { const wy = WH * 0.34, ww = WW * 0.12, wh = WH * 0.17; rr(ctx, wx - ww / 2, wy, ww, wh, 8); ctx.fillStyle = '#aee3ff'; ctx.fill(); ctx.fillStyle = '#fff3a0'; ctx.beginPath(); ctx.arc(wx + ww * 0.2, wy + wh * 0.3, wh * 0.16, 0, 7); ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = '#cdb089'; rr(ctx, wx - ww / 2, wy, ww, wh, 8); ctx.stroke(); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx, wy + wh); ctx.moveTo(wx - ww / 2, wy + wh / 2); ctx.lineTo(wx + ww / 2, wy + wh / 2); ctx.stroke(); });
-    // 挂画
-    [WW * 0.34, WW * 0.66].forEach((px, i) => { const py = WH * 0.32, pw = WW * 0.08, ph = WH * 0.11; rr(ctx, px - pw / 2, py, pw, ph, 5); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#b98a5c'; ctx.stroke(); ctx.fillStyle = i ? '#7fc7f0' : '#ffb6c1'; ctx.beginPath(); ctx.arc(px, py + ph * 0.5, ph * 0.22, 0, 7); ctx.fill(); });
-    // 木地板
-    const fg = ctx.createLinearGradient(0, floorY, 0, WH); fg.addColorStop(0, '#caa066'); fg.addColorStop(1, '#a87f48'); ctx.fillStyle = fg; ctx.fillRect(0, floorY, WW, WH - floorY);
-    ctx.strokeStyle = 'rgba(120,80,40,.2)'; ctx.lineWidth = 2; for (let i = 1; i < 7; i++) { const y = floorY + i / 7 * (WH - floorY); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WW, y); ctx.stroke(); }
-    // 大圆地毯
-    ctx.fillStyle = '#df7a7a'; ctx.beginPath(); ctx.ellipse(WW * 0.5, WH * 0.8, WW * 0.32, WH * 0.13, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#f0a0a0'; ctx.beginPath(); ctx.ellipse(WW * 0.5, WH * 0.8, WW * 0.24, WH * 0.095, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = '#ffd0d0'; ctx.beginPath(); ctx.ellipse(WW * 0.5, WH * 0.8, WW * 0.15, WH * 0.06, 0, 0, 7); ctx.fill();
-    // 两侧盆栽
-    [WW * 0.07, WW * 0.93].forEach(px => { const py = WH * 0.64; ctx.fillStyle = '#c0794a'; rr(ctx, px - WW * 0.02, py, WW * 0.04, WH * 0.06, 4); ctx.fill(); ctx.fillStyle = '#2ecc71'; ctx.beginPath(); ctx.arc(px, py - WH * 0.02, WW * 0.03, 0, 7); ctx.fill(); ctx.fillStyle = '#27ae60'; ctx.beginPath(); ctx.arc(px - WW * 0.018, py - WH * 0.005, WW * 0.018, 0, 7); ctx.fill(); });
-    const rg = ctx.createRadialGradient(WW * 0.5, WH * 0.2, 0, WW * 0.5, WH * 0.2, WH * 0.6); rg.addColorStop(0, 'rgba(255,240,180,.32)'); rg.addColorStop(1, 'rgba(255,240,180,0)'); ctx.fillStyle = rg; ctx.fillRect(0, 0, WW, WH);
+  const HOME_STYLES = [
+    { wall: ['#ffe9c7', '#eebd86'], floor: ['#caa066', '#a87f48'], accent: '#df7a7a' },
+    { wall: ['#ffe0ec', '#ffc1d8'], floor: ['#e7c08a', '#cfa066'], accent: '#ff9fc0' },
+    { wall: ['#dff0ff', '#bcdcf5'], floor: ['#cdb89a', '#a89372'], accent: '#7fc7f0' },
+    { wall: ['#e8f6df', '#c7ebbf'], floor: ['#d2b07a', '#b48f54'], accent: '#7fd99a' },
+  ];
+  function tentRoomBg(ctx, WW, WH, S) {
+    const home = G.save.homes[S.homeId] || G.save.homes['1'], st = HOME_STYLES[(home.style || 0) % HOME_STYLES.length], room = S.room || 'living', floorY = WH * 0.6;
+    const wg = ctx.createLinearGradient(0, 0, 0, floorY); wg.addColorStop(0, st.wall[0]); wg.addColorStop(1, st.wall[1]); ctx.fillStyle = wg; ctx.fillRect(0, 0, WW, floorY);
+    const fg = ctx.createLinearGradient(0, floorY, 0, WH); fg.addColorStop(0, st.floor[0]); fg.addColorStop(1, st.floor[1]); ctx.fillStyle = fg; ctx.fillRect(0, floorY, WW, WH - floorY);
+    ctx.strokeStyle = 'rgba(90,60,30,.18)'; ctx.lineWidth = 2; for (let i = 1; i < 7; i++) { const y = floorY + i / 7 * (WH - floorY); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WW, y); ctx.stroke(); }
+    ctx.fillStyle = 'rgba(120,80,40,.25)'; ctx.fillRect(0, floorY - 8, WW, 8);
+    function window2(wx) { const wy = WH * 0.32, ww = WW * 0.13, wh = WH * 0.18; rr(ctx, wx - ww / 2, wy, ww, wh, 8); ctx.fillStyle = '#aee3ff'; ctx.fill(); ctx.fillStyle = '#fff3a0'; ctx.beginPath(); ctx.arc(wx + ww * 0.2, wy + wh * 0.3, wh * 0.16, 0, 7); ctx.fill(); ctx.lineWidth = 6; ctx.strokeStyle = '#cdb089'; rr(ctx, wx - ww / 2, wy, ww, wh, 8); ctx.stroke(); ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(wx, wy); ctx.lineTo(wx, wy + wh); ctx.moveTo(wx - ww / 2, wy + wh / 2); ctx.lineTo(wx + ww / 2, wy + wh / 2); ctx.stroke(); }
+    if (room === 'living') {
+      ctx.fillStyle = st.accent; ctx.beginPath(); ctx.ellipse(WW * 0.5, WH * 0.8, WW * 0.3, WH * 0.12, 0, 0, 7); ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.35)'; ctx.beginPath(); ctx.ellipse(WW * 0.5, WH * 0.8, WW * 0.21, WH * 0.085, 0, 0, 7); ctx.fill();
+      window2(WW * 0.18); window2(WW * 0.82);
+      [WW * 0.36, WW * 0.64].forEach((px, i) => { const py = WH * 0.3, pw = WW * 0.08, ph = WH * 0.1; rr(ctx, px - pw / 2, py, pw, ph, 5); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 5; ctx.strokeStyle = '#b98a5c'; ctx.stroke(); ctx.fillStyle = i ? '#7fc7f0' : '#ffb6c1'; ctx.beginPath(); ctx.arc(px, py + ph * 0.5, ph * 0.22, 0, 7); ctx.fill(); });
+    } else if (room === 'bedroom') {
+      ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 10; i++) { const x = (i * 211) % WW, y = (i * 97) % (floorY * 0.7); ctx.beginPath(); ctx.arc(x, y, 5, 0, 7); ctx.fill(); }   // 墙上星星
+      window2(WW * 0.8);
+      ctx.fillStyle = st.accent; ctx.globalAlpha = 0.5; ctx.fillRect(WW * 0.06, floorY, WW * 0.32, WH - floorY); ctx.globalAlpha = 1;   // 床区地毯
+    } else if (room === 'kitchen') {
+      // 瓷砖墙
+      ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let yy = WH * 0.36; yy < floorY; yy += WH * 0.05) for (let xx = 0; xx < WW; xx += WW * 0.05) { ctx.fillRect(xx + 2, yy + 2, WW * 0.05 - 4, WH * 0.05 - 4); }
+      // 操作台
+      ctx.fillStyle = '#c98a52'; ctx.fillRect(0, floorY - WH * 0.06, WW, WH * 0.06); ctx.fillStyle = '#e6c08a'; ctx.fillRect(0, floorY - WH * 0.075, WW, WH * 0.02);
+      window2(WW * 0.82);
+    } else if (room === 'bathroom') {
+      ctx.fillStyle = '#cdeefb'; ctx.fillRect(0, 0, WW, floorY);
+      ctx.strokeStyle = 'rgba(120,170,200,.5)'; ctx.lineWidth = 2; for (let xx = 0; xx <= WW; xx += WW * 0.06) { ctx.beginPath(); ctx.moveTo(xx, 0); ctx.lineTo(xx, floorY); ctx.stroke(); } for (let yy = 0; yy <= floorY; yy += WH * 0.06) { ctx.beginPath(); ctx.moveTo(0, yy); ctx.lineTo(WW, yy); ctx.stroke(); }
+      ctx.fillStyle = '#eaf6fb'; ctx.fillRect(0, floorY, WW, WH - floorY);
+      window2(WW * 0.84);
+    }
+    const rg = ctx.createRadialGradient(WW * 0.5, WH * 0.2, 0, WW * 0.5, WH * 0.2, WH * 0.6); rg.addColorStop(0, 'rgba(255,240,180,.28)'); rg.addColorStop(1, 'rgba(255,240,180,0)'); ctx.fillStyle = rg; ctx.fillRect(0, 0, WW, WH);
   }
 
   /* =======================================================================
-     世界摆放引擎：乐园 / 帐篷 共用（相机平移 + 缩放）
+     世界摆放引擎
      ======================================================================= */
   function makePlacement(opts) {
-    const S = { buttons: [], cam: { s: 1, x: 0, y: 0 } };
+    const S = { buttons: [], cam: { s: 1, x: 0, y: 0 }, homeId: '1', room: 'living' };
     const WW = opts.worldW, WH = opts.worldH;
-    const listArr = () => G.save[opts.listKey];
+    const listArr = () => (opts.listArr ? opts.listArr(S) : G.save[opts.listKey]);
+    function isHome(p) { return !!(p.base || (DATA.ITEMS[p.item] && DATA.ITEMS[p.item].home)); }
     function trayItems() { return Object.keys(DATA.ITEMS).filter(id => (G.save.built[id] || 0) > 0); }
     function groundTop() { return Math.max(46, G.H * 0.075) + 10 + G.H * 0.08; }
     function trayTop() { return G.H - G.H * 0.18; }
@@ -239,10 +266,11 @@
     function s2w(x, y) { return { x: (x - S.cam.x) / S.cam.s, y: (y - S.cam.y) / S.cam.s }; }
     function zoomAt(sx, sy, f) { const w = s2w(sx, sy); S.cam.s = Math.max(sMin(), Math.min(sMin() * 3.4, S.cam.s * f)); S.cam.x = sx - w.x * S.cam.s; S.cam.y = sy - w.y * S.cam.s; clampCam(); }
     function homePos() { const base = listArr().find(p => p.base); return base ? { x: base.x, y: base.y } : { x: WW / 2, y: WH * 0.6 }; }
-    function centerCam() { S.cam.s = sMin() * 1.7; const h = homePos(); S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
+    function centerCam() { S.cam.s = sMin() * 1.7; const h = opts.rooms ? { x: WW / 2, y: WH * 0.7 } : homePos(); S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
 
-    function ensureBase() { if (!opts.base || listArr().some(p => p.base)) return; listArr().unshift({ id: G.save.placeSeq++, item: 'tent', base: true, x: WW / 2, y: WH * 0.6 }); Eng.persist(); }
+    function ensureBase() { if (!opts.base || listArr().some(p => p.base)) return; listArr().unshift({ id: G.save.placeSeq++, item: 'tent', base: true, homeId: '1', x: WW / 2, y: WH * 0.6 }); Eng.persist(); }
     function migrate() {
+      if (opts.listArr) return;
       if (!G.save.mig) G.save.mig = {};
       if (G.save.mig[opts.listKey]) return;
       const ox = G.W / 2, oy = (groundTop() + trayTop()) / 2;
@@ -260,28 +288,43 @@
       listArr().forEach(p => { if (p === self || !DATA.ITEMS[p.item].surface) return; const w = dispS(p.item) * 0.5, ty = surfaceTopY(p); if (Math.abs(wx - p.x) < w && wy > ty - dispS(p.item) * 0.4 && wy < p.y + dispS(p.item) * 0.2) { if (!best || p.y > best.y) best = p; } });
       return best;
     }
-    function clampWorld(p) { p.x = Math.max(40, Math.min(WW - 40, p.x)); p.y = Math.max(WH * (opts.indoor ? 0.5 : 0.42), Math.min(WH - 40, p.y)); }
+    function clampWorld(p) { p.x = Math.max(40, Math.min(WW - 40, p.x)); p.y = Math.max(WH * (opts.rooms ? 0.5 : 0.42), Math.min(WH - 40, p.y)); }
     function trashZone() { const r = Math.max(44, G.H * 0.07); return { x: G.W / 2 - r * 1.6, y: groundTop() + 6, w: r * 3.2, h: r, r }; }
     function trayLayout() { const ids = trayItems(); const tT = trayTop(), h = G.H * 0.18 - 8, iw = h * 0.92, gap = 10, pad = 12; S.trayMax = Math.max(0, pad * 2 + ids.length * (iw + gap) - G.W); return ids.map((id, i) => ({ id, x: pad + i * (iw + gap) + S.trayScroll, y: tT + 4, w: iw, h: h - 8 })); }
 
     function adaSize() { return opts.ada === 'tent' ? 210 : 150; }
-    function adaHome() { if (opts.ada === 'park') { const base = listArr().find(p => p.base); return base ? { x: base.x - dsp(base) * 0.62, y: base.y + dsp(base) * 0.12 } : { x: WW * 0.4, y: WH * 0.6 }; } return { x: WW * 0.5, y: WH * 0.72 }; }
+    function adaHome() { if (opts.ada === 'park') { const base = listArr().find(p => p.base); return base ? { x: base.x - dsp(base) * 0.62, y: base.y + dsp(base) * 0.12 } : { x: WW * 0.4, y: WH * 0.6 }; } return { x: WW * 0.5, y: WH * 0.74 }; }
     function initAda() { if (!opts.ada) return; const sv = G.save.adaPos[opts.ada], h = adaHome(), ix = sv ? sv.x : h.x, iy = sv ? sv.y : h.y; S.ada = { x: ix, y: iy, tx: ix, ty: iy, face: 1, wt: 2, moving: false }; }
-    function genAmbient() { S.ambient = []; if (opts.indoor) return; const cols = ['#ff6b9d', '#feca57', '#ff9ff3', '#ffffff', '#ff7979']; for (let i = 0; i < 70; i++) { const x = 30 + Math.random() * (WW - 60), y = WH * 0.46 + Math.random() * (WH * 0.5), t = Math.random(); if (t < 0.5) S.ambient.push({ kind: 'grass', x, y, h: 16 + Math.random() * 16 }); else if (t < 0.85) S.ambient.push({ kind: 'flower', x, y, r: 7 + Math.random() * 5, c: cols[(Math.random() * cols.length) | 0] }); else S.ambient.push({ kind: 'rock', x, y, r: 9 + Math.random() * 10 }); } }
+    function genAmbient() { S.ambient = []; if (opts.rooms) return; const cols = ['#ff6b9d', '#feca57', '#ff9ff3', '#ffffff', '#ff7979']; for (let i = 0; i < 70; i++) { const x = 30 + Math.random() * (WW - 60), y = WH * 0.46 + Math.random() * (WH * 0.5), t = Math.random(); if (t < 0.5) S.ambient.push({ kind: 'grass', x, y, h: 16 + Math.random() * 16 }); else if (t < 0.85) S.ambient.push({ kind: 'flower', x, y, r: 7 + Math.random() * 5, c: cols[(Math.random() * cols.length) | 0] }); else S.ambient.push({ kind: 'rock', x, y, r: 9 + Math.random() * 10 }); } }
+    function initRiver() { S.river = []; const fc = [['#ff9ff3', '#e26fd0'], '#f368e0'], gc = [['#7ee0a8', '#3bb878'], '#2fa869'], oc = [['#ffd56b', '#f0a93a'], '#e8902a']; const fish = [fc, gc, oc]; for (let i = 0; i < 3; i++) S.river.push({ kind: 'duck', x: Math.random() * WW, vx: 22 + Math.random() * 18, ph: Math.random() * 6, y: WH * 0.635 + Math.random() * WH * 0.03 }); for (let i = 0; i < 4; i++) { const c = fish[i % 3]; S.river.push({ kind: 'fish', x: Math.random() * WW, vx: (Math.random() < .5 ? 1 : -1) * (18 + Math.random() * 20), ph: Math.random() * 6, y: WH * 0.66 + Math.random() * WH * 0.05, col: c[0], fin: c[1] }); } }
 
-    S.enter = function () { S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; migrate(); ensureBase(); genAmbient(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice); };
+    S.enter = function (arg) {
+      if (opts.rooms) { S.homeId = (arg && arg.homeId) || S.homeId || '1'; if (!G.save.homes[S.homeId]) G.save.homes[S.homeId] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; S.room = (arg && arg.room) || 'living'; }
+      S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; S.rotTarget = null; S._pinchInit = false; S.wparts = [];
+      migrate(); ensureBase(); genAmbient(); if (opts.river) initRiver(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice);
+    };
+    S.setRoom = function (rm) { if (S.room === rm) return; S.room = rm; S.drag = null; S.pan = null; S.rotTarget = null; centerCam(); Audio2.sfx('click'); };
     S.resize = function () { clampCam(); };
-    S.cancelDrag = function () { S.drag = null; S.pan = null; S.trayDrag = null; };
+    S.cancelDrag = function () { S.drag = null; S.pan = null; S.trayDrag = null; S._pinchInit = false; };
     S.wheel = function (dy) { zoomAt(G.pointer.x, G.pointer.y, dy < 0 ? 1.12 : 0.9); };
-    S.onPinch = function (factor, cx, cy) { zoomAt(cx, cy, factor); };
+    S.onPinch = function (factor, cx, cy, da) {
+      if (!S._pinchInit) { const w = s2w(cx, cy); const p = pickPlaced(w.x, w.y); S.rotTarget = (p && !p.base) ? p : null; S._pinchInit = true; }
+      if (S.rotTarget) { S.rotTarget.rot = (S.rotTarget.rot || 0) + da; }
+      else zoomAt(cx, cy, factor);
+    };
+    S.onPinchEnd = function () { S._pinchInit = false; if (S.rotTarget) { Eng.persist(); S.rotTarget = null; } };
     S.update = function (dt) {
-      if (!opts.ada || !S.ada) return;
-      const a = S.ada;
-      if (S.drag && S.drag.kind === 'ada') { a.moving = false; return; }
-      a.wt -= dt;
-      if (a.wt <= 0) { a.tx = WW * 0.15 + Math.random() * WW * 0.7; a.ty = WH * (opts.indoor ? 0.58 : 0.5) + Math.random() * WH * 0.36; a.wt = 2.5 + Math.random() * 3.5; }
-      const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
-      if (d > 4) { const step = Math.min(d, 150 * dt); a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > 1) a.face = dx > 0 ? 1 : -1; a.moving = true; } else a.moving = false;
+      if (opts.ada && S.ada) {
+        const a = S.ada;
+        if (!(S.drag && S.drag.kind === 'ada')) {
+          a.wt -= dt;
+          if (a.wt <= 0) { a.tx = WW * 0.15 + Math.random() * WW * 0.7; a.ty = WH * (opts.rooms ? 0.6 : 0.5) + Math.random() * WH * 0.34; a.wt = 2.5 + Math.random() * 3.5; }
+          const dx = a.tx - a.x, dy = a.ty - a.y, d = Math.hypot(dx, dy);
+          if (d > 4) { const step = Math.min(d, 150 * dt); a.x += dx / d * step; a.y += dy / d * step; if (Math.abs(dx) > 1) a.face = dx > 0 ? 1 : -1; a.moving = true; } else a.moving = false;
+        } else a.moving = false;
+      }
+      if (opts.river && S.river) S.river.forEach(d => { d.x += d.vx * dt; d.ph += dt; if (d.x > WW + 60) d.x = -60; if (d.x < -60) d.x = WW + 60; });
+      if (opts.weather) { const w = G.save.weather; if (w >= 2) { const n = w === 2 ? Math.ceil(60 * dt) : Math.ceil(24 * dt); for (let k = 0; k < n; k++) S.wparts.push({ x: Math.random() * G.W, y: vTop() - 4, vy: w === 2 ? 760 : 130, r: 1.6 + Math.random() * 2, w: w }); for (let i = S.wparts.length - 1; i >= 0; i--) { const p = S.wparts[i]; p.y += p.vy * dt; p.x += p.w === 3 ? Math.sin((p.y + i) * 0.05) * 22 * dt : -70 * dt; if (p.y > vBot()) S.wparts.splice(i, 1); } } else if (S.wparts.length) S.wparts.length = 0; }
     };
 
     S.down = function (x, y) {
@@ -323,16 +366,17 @@
       if (dr.kind === 'tray') {
         if (inWorld) {
           const it = DATA.ITEMS[dr.item];
-          const entry = { id: G.save.placeSeq++, item: dr.item, x: w.x, y: w.y }; clampWorld(entry);
+          const entry = { id: G.save.placeSeq++, item: dr.item, x: w.x, y: w.y, rot: 0 }; clampWorld(entry);
+          if (it.home) { entry.homeId = String(G.save.homeSeq++); G.save.homes[entry.homeId] = { style: (G.save.homeSeq) % HOME_STYLES.length, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; Eng.floatText(w.x * S.cam.s + S.cam.x, w.y * S.cam.s + S.cam.y - 30, '新帐篷! 点进去布置🏠', '#e67e22'); }
           if (it.onTop) { const surf = surfaceAt(w.x, w.y, null); if (surf) { entry.onId = surf.id; entry.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, w.x - surf.x)); } }
           G.save.built[dr.item]--; if (G.save.built[dr.item] <= 0) delete G.save.built[dr.item];
           listArr().push(entry); Audio2.sfx(entry.onId ? 'good' : 'place'); recomputePop(false);
         }
       } else if (dr.kind === 'placed') {
         const p = dr.p, moved = Math.hypot(x - dr.sx, y - dr.sy);
-        if (p.base && opts.onBaseTap && moved < 14) { opts.onBaseTap(); return; }
-        if (p.base && (onTrash || onTray)) { Audio2.sfx('bad'); Eng.floatText(G.W / 2, vTop() + 60, '🏕️ 帐篷是乐园的家，拆不掉哦~', '#e67e22'); Eng.persist(); }
-        else if (onTrash || onTray) { childrenOf(p.id).forEach(c => { c.onId = null; }); G.save.built[p.item] = (G.save.built[p.item] || 0) + 1; listArr().splice(listArr().indexOf(p), 1); Audio2.sfx('pop'); Eng.floatText(x, y - 20, '收回了 ' + DATA.ITEMS[p.item].name, '#ff7675'); recomputePop(false); }
+        if (isHome(p) && moved < 14) { Audio2.sfx('place'); Eng.go('tent', { homeId: p.homeId || '1', room: 'living' }); return; }   // 轻点帐篷=进去
+        if (p.base && (onTrash || onTray)) { Audio2.sfx('bad'); Eng.floatText(G.W / 2, vTop() + 60, '🏕️ 这是 Ada 的家，拆不掉哦~', '#e67e22'); Eng.persist(); }
+        else if (onTrash || onTray) { childrenOf(p.id).forEach(c => { c.onId = null; }); if (isHome(p) && p.homeId) delete G.save.homes[p.homeId]; G.save.built[p.item] = (G.save.built[p.item] || 0) + 1; listArr().splice(listArr().indexOf(p), 1); Audio2.sfx('pop'); Eng.floatText(x, y - 20, '收回了 ' + DATA.ITEMS[p.item].name, '#ff7675'); recomputePop(false); }
         else if (inWorld) { p.onId = null; delete p.offx; if (DATA.ITEMS[p.item].onTop) { const surf = surfaceAt(w.x, w.y, p); if (surf) { p.onId = surf.id; p.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, w.x - surf.x)); Audio2.sfx('good'); } } Audio2.sfx('place'); Eng.persist(); recomputePop(true); }
       }
     };
@@ -340,7 +384,6 @@
     S.draw = function (ctx) {
       S.buttons = [];
       const vt = vTop(), vb = vBot();
-      // —— 世界层（相机变换 + 裁剪）——
       ctx.save();
       ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
       ctx.translate(S.cam.x, S.cam.y); ctx.scale(S.cam.s, S.cam.s);
@@ -350,19 +393,25 @@
       const roots = listArr().filter(p => !p.onId).sort((a, b) => a.y - b.y), order = [];
       roots.forEach(r => { order.push(r); childrenOf(r.id).sort((a, b) => a.x - b.x).forEach(c => order.push(c)); });
       order.forEach(p => {
-        const ds = dsp(p), dragging = S.drag && S.drag.kind === 'placed' && S.drag.p === p;
-        if (p.base) { ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.62, ds * 0.22, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(214,189,140,.55)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.5, ds * 0.17, 0, 0, 7); ctx.fill(); }
+        const ds = dsp(p), home = isHome(p), dragging = S.drag && S.drag.kind === 'placed' && S.drag.p === p;
+        if (home) { ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.62, ds * 0.22, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(214,189,140,.5)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.5, ds * 0.17, 0, 0, 7); ctx.fill(); }
         if (!p.onId) { ctx.fillStyle = 'rgba(0,0,0,' + (dragging ? .22 : .14) + ')'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.4, ds * 0.32, ds * 0.12, 0, 0, 7); ctx.fill(); }
-        Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1));
-        if (p.base) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; const lw = ds * 0.62, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5; rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.62) + 'px "PingFang SC",sans-serif'; ctx.fillText('🚪 点我进帐篷', p.x, ly + lh / 2); }
+        Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1), { rot: p.rot || 0 });
+        if (home) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; const lw = ds * 0.66, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5; rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.6) + 'px "PingFang SC",sans-serif'; ctx.fillText('🚪 点我进去', p.x, ly + lh / 2); }
       });
-      if (S.drag && S.drag.item && DATA.ITEMS[S.drag.item] && DATA.ITEMS[S.drag.item].onTop) { const wp = s2w(S.drag.scrX, S.drag.scrY); const surf = surfaceAt(wp.x, wp.y, S.drag.kind === 'placed' ? S.drag.p : null); if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w, surfaceTopY(surf) - 7, w * 2, 14); ctx.restore(); } }
+      if (S.drag && S.drag.item && DATA.ITEMS[S.drag.item] && DATA.ITEMS[S.drag.item].onTop) { const wp = s2w(S.drag.scrX, S.drag.scrY); const surf = surfaceAt(wp.x, wp.y, S.drag.kind === 'placed' ? S.drag.p : null); if (surf) { ctx.save(); ctx.strokeStyle = '#27ae60'; ctx.lineWidth = 3; ctx.setLineDash([9, 6]); const w2 = dispS(surf.item) * 0.5; ctx.strokeRect(surf.x - w2, surfaceTopY(surf) - 7, w2 * 2, 14); ctx.restore(); } }
       if (opts.ada && S.ada) { const sz = adaSize(), dragging = S.drag && S.drag.kind === 'ada'; const hop = (S.ada.moving || dragging) ? Math.abs(Math.sin(G.t * 9)) * sz * 0.05 : 0; drawAda(ctx, S.ada.x, S.ada.y, sz, S.ada.face, hop); }
       ctx.restore();
 
-      // —— 屏幕 UI 层 ——
+      if (opts.afterDraw) opts.afterDraw(ctx, S);
+
+      // —— 屏幕 UI ——
       if (opts.showVisitors) drawVisitorBar(ctx);
-      else { ctx.fillStyle = '#b06a30'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(G.H * 0.04) + 'px "PingFang SC",sans-serif'; ctx.fillText('🏕️ Ada 公主的小帐篷', G.W / 2, vTop() - G.H * 0.025); }
+      if (opts.rooms) {                                   // 房间标签
+        const rooms = [['living', '客厅'], ['bedroom', '卧室'], ['kitchen', '厨房'], ['bathroom', '厕所']];
+        const th = Math.max(36, G.H * 0.058), tw = Math.min(G.W * 0.13, 118), gap = 6, totalW = rooms.length * (tw + gap) - gap, sx2 = (G.W - totalW) / 2, ty = vt - th - 6;
+        rooms.forEach((r, i) => { const cur = S.room === r[0]; const b = { x: sx2 + i * (tw + gap), y: ty, w: tw, h: th, label: r[1], color: cur ? '#e67e22' : '#caa06a', fs: Math.round(th * 0.42), onTap: () => S.setRoom(r[0]) }; S.buttons.push(b); btn(ctx, b); });
+      }
       if (S.drag && S.drag.kind === 'placed' && !S.drag.p.base) {
         const tz = trashZone(), hot = S.drag.scrX > tz.x && S.drag.scrX < tz.x + tz.w && S.drag.scrY > tz.y - 10 && S.drag.scrY < tz.y + tz.h + 10;
         rr(ctx, tz.x, tz.y, tz.w, tz.h, tz.h * 0.4); ctx.fillStyle = hot ? 'rgba(231,76,60,.96)' : 'rgba(231,76,60,.72)'; ctx.fill();
@@ -376,7 +425,7 @@
       else { trayLayout().forEach(t => { rr(ctx, t.x, t.y, t.w, t.h, 12); ctx.fillStyle = '#fff'; ctx.fill(); ctx.lineWidth = 2.5; ctx.strokeStyle = '#27ae60'; ctx.stroke(); Sprites.draw(ctx, DATA.ITEMS[t.id].sprite, t.x + t.w / 2, t.y + t.h * 0.42, t.w * 0.62); ctx.fillStyle = '#27ae60'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(t.w * 0.18) + 'px "PingFang SC",sans-serif'; ctx.fillText(DATA.ITEMS[t.id].name + ' ×' + (G.save.built[t.id] || 0), t.x + t.w / 2, t.y + t.h * 0.85); }); }
       if (S.drag && S.drag.kind === 'tray') { const gsz = baseS() * (DATA.ITEMS[S.drag.item].scale || 1) * S.cam.s * 1.05; ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.32)'; ctx.shadowBlur = 16; ctx.shadowOffsetY = 8; Sprites.draw(ctx, DATA.ITEMS[S.drag.item].sprite, S.drag.scrX, S.drag.scrY, gsz); ctx.restore(); }
       if (S.trayMax > 4 && !S.drag) { ctx.fillStyle = 'rgba(39,174,96,.7)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(G.H * 0.022) + 'px "PingFang SC",sans-serif'; ctx.fillText('← 左右滑动看更多 →', G.W / 2, trayTop() + G.H * 0.005); }
-      if (!S.drag && !S.pan) { ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(G.H * 0.023) + 'px "PingFang SC",sans-serif'; ctx.fillText(opts.hint, G.W / 2, trayTop() - G.H * 0.02); }
+      if (!S.drag && !S.pan) { ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(G.H * 0.022) + 'px "PingFang SC",sans-serif'; ctx.fillText(opts.hint, G.W / 2, trayTop() - G.H * 0.02); }
 
       const bw = Math.min(G.W * 0.2, 156), bh = Math.max(40, G.H * 0.07);
       opts.nav(S, ctx, bw, bh);
@@ -387,20 +436,32 @@
 
   /* —— 乐园 —— */
   const park = makePlacement({
-    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 2600, worldH: 1500,
-    hint: '拖空地平移 · 双指/滚轮缩放 · 拖物品摆放(可叠桌上) · 拖到🗑删除 · 点帐篷进去',
-    onBaseTap: () => { Audio2.sfx('place'); Eng.go('tent'); },
+    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 2600, worldH: 1500, river: true, weather: true,
+    hint: '拖空地平移 · 双指/滚轮缩放 · 双指转物品 · 拖到🗑删除 · 点帐篷进去',
+    afterDraw: (ctx, S) => {
+      const w = G.save.weather; if (w < 2 || !S.wparts || !S.wparts.length) return;
+      const vt = Math.max(46, G.H * 0.075) + 10 + G.H * 0.08, vb = G.H - G.H * 0.18;
+      ctx.save(); ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
+      if (w === 2) { ctx.strokeStyle = 'rgba(165,200,235,.65)'; ctx.lineWidth = 2; ctx.lineCap = 'round'; S.wparts.forEach(p => { ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 5, p.y + 16); ctx.stroke(); }); }
+      else { ctx.fillStyle = 'rgba(255,255,255,.92)'; S.wparts.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }); }
+      ctx.restore();
+    },
     nav: (S, ctx, bw, bh) => {
       const ob = { x: G.W - bw * 2 - 22, y: 12, w: bw, h: bh, label: '🌊 去大海', color: '#2e86de', fs: Math.round(bh * 0.3), onTap: () => Eng.go('ocean', DATA.LEVELS[0]) };
       const cb = { x: G.W - bw - 12, y: 12, w: bw, h: bh, label: '🔨 造东西', color: '#e67e22', fs: Math.round(bh * 0.3), onTap: () => Eng.openCraft() };
       S.buttons.push(ob, cb); btn(ctx, ob); btn(ctx, cb);
+      const s = Math.max(40, G.H * 0.07), by = (G.H - G.H * 0.18) - s - 8;
+      const nb = { x: 12, y: by, w: s, h: s, label: G.save.night ? '🌙' : '☀️', color: '#7e8cc4', fs: Math.round(s * 0.45), onTap: () => { G.save.night = !G.save.night; Eng.persist(); } };
+      const wl = ['☀️', '☁️', '🌧️', '❄️'], wb = { x: 12 + s + 8, y: by, w: s, h: s, label: wl[G.save.weather], color: '#6fb7d8', fs: Math.round(s * 0.45), onTap: () => { G.save.weather = (G.save.weather + 1) % 4; Eng.persist(); } };
+      S.buttons.push(nb, wb); btn(ctx, nb); btn(ctx, wb);
     },
   });
 
-  /* —— 帐篷内部 —— */
+  /* —— 帐篷内部（多房间）—— */
   const tent = makePlacement({
-    listKey: 'tentPlaced', voice: 'tent_intro', base: false, showVisitors: false, ada: 'tent', bg: tentWorldBg, worldW: 2000, worldH: 1300, indoor: true,
-    hint: '拖空地平移 · 双指/滚轮缩放 · 把东西拖进来布置 Ada 的家 · 拖到🗑收回',
+    voice: 'tent_intro', ada: 'tent', bg: tentRoomBg, worldW: 2000, worldH: 1300, rooms: true,
+    listArr: (S) => { const h = G.save.homes[S.homeId] || G.save.homes['1']; if (!h.rooms[S.room]) h.rooms[S.room] = []; return h.rooms[S.room]; },
+    hint: '拖空地平移 · 双指缩放/转物品 · 上面切换房间 · 拖东西进来布置 · 拖到🗑收回',
     back: () => Eng.go('park'),
     nav: (S, ctx, bw, bh) => {
       const ob = { x: G.W - bw * 2 - 22, y: 12, w: bw, h: bh, label: '🌳 出帐篷', color: '#27ae60', fs: Math.round(bh * 0.3), onTap: () => Eng.go('park') };

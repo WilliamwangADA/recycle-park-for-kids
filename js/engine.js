@@ -17,8 +17,12 @@ window.Game = (function () {
       bag: {},               // 捡到未分类的垃圾 {trashId: count}
       mats: {},              // 材料 {matId: count}
       built: {},             // 已造物品 {itemId: count}
-      placed: [],            // 乐园里摆放 [{id, item, x, y, onId?}]
-      tentPlaced: [],        // 帐篷内布置 [{id, item, x, y, onId?}]
+      placed: [],            // 乐园里摆放 [{id, item, x, y, onId?, rot?, homeId?}]
+      tentPlaced: [],        // 旧版帐篷布置（已迁移到 homes['1'].rooms.living）
+      homes: { '1': { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } } }, // 每顶帐篷=一个家，各有风格+4房间
+      homeSeq: 2,            // 新帐篷家 id 自增
+      weather: 0,            // 乐园天气 0晴 1多云 2雨 3雪
+      night: false,          // 乐园昼夜
       adaPos: {},            // Ada 公主位置 {park:{x,y}, tent:{x,y}}（可拖动+自己溜达）
       placeSeq: 1,           // 摆放项唯一 id 自增
       stars: 0,              // 分类星星（货币之一，给造物提示用）
@@ -34,9 +38,15 @@ window.Game = (function () {
     // 补字段（向后兼容）
     const d = defaultSave();
     for (const k in d) if (G.save[k] == null) G.save[k] = d[k];
-    // 给旧存档的摆放项补 id
-    let mx = 0;
-    G.save.placed.concat(G.save.tentPlaced).forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
+    // homes 结构 + 旧 tentPlaced 迁移到 1 号家客厅
+    if (!G.save.homes) G.save.homes = { '1': { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } } };
+    if (!G.save.homes['1']) G.save.homes['1'] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } };
+    if (G.save.tentPlaced && G.save.tentPlaced.length && !G.save.tentMig) { G.save.homes['1'].rooms.living = G.save.homes['1'].rooms.living.concat(G.save.tentPlaced); G.save.tentPlaced = []; G.save.tentMig = true; }
+    G.save.placed.forEach(p => { if (p.base && !p.homeId) p.homeId = '1'; });
+    // 给所有摆放项补 id
+    let mx = 0, all = G.save.placed.slice();
+    for (const hid in G.save.homes) for (const rm in G.save.homes[hid].rooms) all = all.concat(G.save.homes[hid].rooms[rm]);
+    all.forEach(p => { if (!p.id) p.id = G.save.placeSeq++; mx = Math.max(mx, p.id); });
     if (G.save.placeSeq <= mx) G.save.placeSeq = mx + 1;
   }
   function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(G.save)); } catch (e) {} }
@@ -113,11 +123,12 @@ window.Game = (function () {
     return { x: t.clientX - r.left, y: t.clientY - r.top };
   }
   function touchDist(t) { return Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY); }
+  function touchAng(t) { return Math.atan2(t[1].clientY - t[0].clientY, t[1].clientX - t[0].clientX); }
   function touchMid(t) { const r = G.canvas.getBoundingClientRect(); return { x: (t[0].clientX + t[1].clientX) / 2 - r.left, y: (t[0].clientY + t[1].clientY) / 2 - r.top }; }
   function onDown(e) {
     e.preventDefault(); Audio2.unlock();
-    if (e.touches && e.touches.length >= 2) {                 // 双指 → 缩放，取消单指拖动
-      G._pinch = { d: touchDist(e.touches), m: touchMid(e.touches) };
+    if (e.touches && e.touches.length >= 2) {                 // 双指 → 缩放/旋转，取消单指拖动
+      G._pinch = { d: touchDist(e.touches), a: touchAng(e.touches), m: touchMid(e.touches) };
       if (G.scene && G.scene.cancelDrag) G.scene.cancelDrag();
       return;
     }
@@ -126,16 +137,17 @@ window.Game = (function () {
   }
   function onMove(e) {
     if (G._pinch && e.touches && e.touches.length >= 2) {
-      const d = touchDist(e.touches), m = touchMid(e.touches), f = d / (G._pinch.d || d);
-      if (G.scene && G.scene.onPinch) G.scene.onPinch(f, m.x, m.y);
-      G._pinch.d = d; G._pinch.m = m; G.pointer.x = m.x; G.pointer.y = m.y;
+      const d = touchDist(e.touches), ang = touchAng(e.touches), m = touchMid(e.touches), f = d / (G._pinch.d || d);
+      let da = ang - G._pinch.a; if (da > Math.PI) da -= 2 * Math.PI; if (da < -Math.PI) da += 2 * Math.PI;
+      if (G.scene && G.scene.onPinch) G.scene.onPinch(f, m.x, m.y, da);
+      G._pinch.d = d; G._pinch.a = ang; G._pinch.m = m; G.pointer.x = m.x; G.pointer.y = m.y;
       return;
     }
     const p = pos(e); G.pointer.x = p.x; G.pointer.y = p.y;
     if (G.scene && G.scene.move) G.scene.move(p.x, p.y);
   }
   function onUp(e) {
-    if (G._pinch) { if (!e.touches || e.touches.length < 2) G._pinch = null; G.pointer.down = false; return; }
+    if (G._pinch) { if (!e.touches || e.touches.length < 2) { G._pinch = null; if (G.scene && G.scene.onPinchEnd) G.scene.onPinchEnd(); } G.pointer.down = false; return; }
     const p = pos(e); G.pointer.down = false;
     if (G.scene && G.scene.up) G.scene.up(p.x, p.y);
   }
