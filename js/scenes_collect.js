@@ -117,7 +117,7 @@
   };
   ocean.resize = function () { if (ocean.water) Marine.init(G.W, G.H); setupDecor(); };
   function waterTop() { return Math.max(44, G.H * 0.072) + 10 + Math.max(40, G.H * 0.066) + 12; } // 计分牌 + 控制行
-  function binH() { return G.H * 0.135; }
+  function binH() { return G.H * 0.15; }
   function binsTop() { return G.H - binH() - 8; }
   function sandTop() { return binsTop() - G.H * 0.04; }
 
@@ -422,31 +422,54 @@
     // 涟漪
     ocean.ripples.forEach(rp => { const k = rp.age / rp.max; ctx.save(); ctx.globalAlpha = (1 - k) * 0.8; ctx.lineWidth = 4 * (1 - k) + 1; ctx.strokeStyle = lighten(rp.col, 40); ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 10 + k * 60, (10 + k * 60) * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore(); });
 
-    // 分类箱（立体光泽 + 开口 + 名牌 + 开盖吞垃圾动画）
+    // 分类箱（台形桶身 + 翻盖 + 横排：左大图标｜右名字+提示）
     binRects().forEach(r => {
       const c = r.bin.color, open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
-      Eng.softShadow(ctx, r.x + r.w / 2, r.y + r.h + 5, r.w * 0.5, r.h * 0.12, 0.3);
-      const grd = ctx.createLinearGradient(0, r.y, 0, r.y + r.h); grd.addColorStop(0, lighten(c, 26)); grd.addColorStop(0.5, c); grd.addColorStop(1, lighten(c, -22));
-      rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.fillStyle = grd; ctx.fill();
-      ctx.save(); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.clip();
-      rr(ctx, r.x + r.w * 0.12, r.y + r.h * 0.05, r.w * 0.76, r.h * 0.18, 10); ctx.fillStyle = lighten(c, -42); ctx.fill();   // 开口深槽
-      const gl = ctx.createLinearGradient(r.x, 0, r.x + r.w * 0.45, 0); gl.addColorStop(0, 'rgba(255,255,255,.34)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(r.x, r.y, r.w * 0.45, r.h);   // 左高光
-      ctx.strokeStyle = lighten(c, -14); ctx.lineWidth = 2; for (let i = 1; i < 4; i++) { const x = r.x + r.w * i / 4; ctx.beginPath(); ctx.moveTo(x, r.y + r.h * 0.3); ctx.lineTo(x, r.y + r.h * 0.92); ctx.stroke(); }   // 竖纹
+      const bx = r.x, bw = r.w, by = r.y, bh = r.h;
+      const lidH = bh * 0.19, bodyTop = by + lidH * 0.72, bodyH = by + bh - bodyTop, inset = bw * 0.055, rC = 13;
+      Eng.softShadow(ctx, bx + bw / 2, by + bh + 3, bw * 0.46, bh * 0.1, 0.32);
+      function body() {
+        ctx.beginPath();
+        ctx.moveTo(bx + rC, bodyTop); ctx.lineTo(bx + bw - rC, bodyTop);
+        ctx.quadraticCurveTo(bx + bw, bodyTop, bx + bw - inset * 0.35, bodyTop + rC);
+        ctx.lineTo(bx + bw - inset, bodyTop + bodyH - rC);
+        ctx.quadraticCurveTo(bx + bw - inset, bodyTop + bodyH, bx + bw - inset - rC, bodyTop + bodyH);
+        ctx.lineTo(bx + inset + rC, bodyTop + bodyH);
+        ctx.quadraticCurveTo(bx + inset, bodyTop + bodyH, bx + inset, bodyTop + bodyH - rC);
+        ctx.lineTo(bx + inset * 0.35, bodyTop + rC);
+        ctx.quadraticCurveTo(bx, bodyTop, bx + rC, bodyTop); ctx.closePath();
+      }
+      const grd = ctx.createLinearGradient(0, bodyTop, 0, bodyTop + bodyH); grd.addColorStop(0, lighten(c, 24)); grd.addColorStop(0.5, c); grd.addColorStop(1, lighten(c, -26));
+      body(); ctx.fillStyle = grd; ctx.fill();
+      ctx.save(); body(); ctx.clip();
+      const gl = ctx.createLinearGradient(bx, 0, bx + bw * 0.42, 0); gl.addColorStop(0, 'rgba(255,255,255,.3)'); gl.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = gl; ctx.fillRect(bx, bodyTop, bw * 0.42, bodyH);
+      const grr = ctx.createLinearGradient(bx + bw * 0.72, 0, bx + bw, 0); grr.addColorStop(0, 'rgba(0,0,0,0)'); grr.addColorStop(1, 'rgba(0,0,0,.13)'); ctx.fillStyle = grr; ctx.fillRect(bx + bw * 0.72, bodyTop, bw * 0.3, bodyH);
+      ctx.strokeStyle = 'rgba(255,255,255,.13)'; ctx.lineWidth = 2; for (let i = 1; i < 5; i++) { const x = bx + inset + (bw - inset * 2) * i / 5; ctx.beginPath(); ctx.moveTo(x, bodyTop + bodyH * 0.18); ctx.lineTo(x, bodyTop + bodyH * 0.9); ctx.stroke(); }
       ctx.restore();
-      ctx.lineWidth = 2; ctx.strokeStyle = lighten(c, -30); rr(ctx, r.x, r.y, r.w, r.h, 16); ctx.stroke();
-      // 盖子（命中翻开）
-      ctx.save(); ctx.translate(r.x - 4, r.y - 6); ctx.rotate(-open * 0.7); const lg2 = ctx.createLinearGradient(0, -8, 0, 10); lg2.addColorStop(0, lighten(c, 12)); lg2.addColorStop(1, lighten(c, -26)); rr(ctx, 0, -8, r.w + 8, 18, 9); ctx.fillStyle = lg2; ctx.fill(); rr(ctx, (r.w + 8) / 2 - r.w * 0.06, -6, r.w * 0.12, 5, 3); ctx.fillStyle = lighten(c, -34); ctx.fill(); ctx.restore();
-      // 分类大图标（白圆牌衬底，一眼看懂往哪扔）
-      const cxm = r.x + r.w / 2, iy = r.y + r.h * 0.37, ir = r.w * 0.19;
-      ctx.beginPath(); ctx.arc(cxm, iy, ir, 0, 7); ctx.fillStyle = 'rgba(255,255,255,.95)'; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(0,0,0,.08)'; ctx.stroke();
-      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = Math.round(r.w * 0.25) + 'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
-      ctx.fillText(r.bin.icon || '🗑️', cxm, iy + r.w * 0.012);
-      // 名牌
-      const ph = r.h * 0.2, py = r.y + r.h * 0.63; rr(ctx, r.x + r.w * 0.08, py, r.w * 0.84, ph, ph * 0.42); ctx.fillStyle = lighten(c, -30); ctx.fill();
-      ctx.fillStyle = '#fff'; ctx.font = 'bold ' + Math.round(r.w * 0.15) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(r.bin.name, cxm, py + ph * 0.54);
-      ctx.fillStyle = 'rgba(255,255,255,.92)'; ctx.font = 'bold ' + Math.round(r.w * 0.07) + 'px "PingFang SC",sans-serif';
-      ctx.fillText(r.bin.tip, cxm, r.y + r.h * 0.9);
+      ctx.lineWidth = 2; ctx.strokeStyle = lighten(c, -34); body(); ctx.stroke();
+      // 翻盖（命中时向左翻开）
+      ctx.save(); ctx.translate(bx - 3, by + lidH * 0.5); ctx.rotate(-open * 0.8);
+      const lidW = bw + 6, lg2 = ctx.createLinearGradient(0, -lidH * 0.5, 0, lidH * 0.5); lg2.addColorStop(0, lighten(c, 18)); lg2.addColorStop(1, lighten(c, -22));
+      rr(ctx, 0, -lidH * 0.5, lidW, lidH, lidH * 0.45); ctx.fillStyle = lg2; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = lighten(c, -34); ctx.stroke();
+      rr(ctx, lidW / 2 - bw * 0.06, -lidH * 0.95, bw * 0.12, lidH * 0.55, lidH * 0.22); ctx.fillStyle = lighten(c, -6); ctx.fill();   // 把手
+      rr(ctx, lidW * 0.06, -lidH * 0.32, lidW * 0.46, lidH * 0.28, lidH * 0.14); ctx.fillStyle = 'rgba(255,255,255,.32)'; ctx.fill();   // 盖面高光
+      ctx.restore();
+      // 左：分类大图标（彩环 + 白牌）
+      const icx = bx + bw * 0.23, icy = bodyTop + bodyH * 0.5, ir = Math.min(bodyH * 0.37, bw * 0.16);
+      ctx.beginPath(); ctx.arc(icx, icy, ir + 3, 0, 7); ctx.fillStyle = lighten(c, 34); ctx.fill();
+      ctx.beginPath(); ctx.arc(icx, icy, ir, 0, 7); ctx.fillStyle = '#fff'; ctx.fill();
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = Math.round(ir * 1.25) + 'px "Apple Color Emoji","Segoe UI Emoji",sans-serif';
+      ctx.fillText(r.bin.icon || '🗑️', icx, icy + ir * 0.06);
+      // 右：名字 + 提示药丸
+      const tx = bx + bw * 0.41;
+      ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.lineJoin = 'round';
+      ctx.font = 'bold ' + Math.round(bw * 0.135) + 'px "PingFang SC",sans-serif';
+      ctx.lineWidth = 3.5; ctx.strokeStyle = 'rgba(0,0,0,.24)'; ctx.strokeText(r.bin.name, tx, icy - bodyH * 0.14);
+      ctx.fillStyle = '#fff'; ctx.fillText(r.bin.name, tx, icy - bodyH * 0.14);
+      ctx.font = 'bold ' + Math.round(bw * 0.056) + 'px "PingFang SC",sans-serif';
+      const tw = ctx.measureText(r.bin.tip).width;
+      rr(ctx, tx - 3, icy + bodyH * 0.06, tw + 14, bodyH * 0.3, bodyH * 0.15); ctx.fillStyle = 'rgba(255,255,255,.22)'; ctx.fill();
+      ctx.fillStyle = 'rgba(255,255,255,.96)'; ctx.fillText(r.bin.tip, tx + 4, icy + bodyH * 0.21);
     });
 
     // 计分牌
