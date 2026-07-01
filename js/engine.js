@@ -104,6 +104,7 @@ window.Game = (function () {
     const dt = Math.min(0.05, (ts - G.last) / 1000 || 0);
     G.last = ts; G.t += dt;
     const ctx = G.ctx;
+    ctx.clearRect(0, 0, G.W, G.H);                 // 每帧清屏，避免切场景残留
     if (G.scene) { if (G.scene.update) G.scene.update(dt); if (G.scene.draw) G.scene.draw(ctx); }
     drawFx(ctx, dt);
     requestAnimationFrame(frame);

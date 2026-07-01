@@ -457,18 +457,20 @@
     S.draw = function (ctx) {
       S.buttons = [];
       const vt = vTop(), vb = vBot();
+      ctx.fillStyle = opts.rooms ? '#efe6d8' : '#dff1ff';   // 铺满整屏，视口外不露上一个场景
+      ctx.fillRect(0, 0, G.W, G.H);
       ctx.save();
       ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
       ctx.translate(S.cam.x, S.cam.y); ctx.scale(S.cam.s, S.cam.s);
       opts.bg(ctx, WW, WH, S);
       if (opts.showVisitors) DATA.VISITORS.filter(v => G.save.visitors[v.id]).forEach((v, i) => {
-        const t = G.t * 0.22 + i * 1.7;
+        const t = G.t * 0.08 + i * 1.7;                         // 走得慢一些
         if (v.id === 'bird') {                                  // 小鸟：飞在天空（山头上方）
-          const x = WW * 0.5 + Math.cos(t * 0.8) * WW * 0.3, y = WH * 0.3 + Math.sin(t * 1.7) * WH * 0.06, sz = 95;
+          const x = WW * 0.5 + Math.cos(t * 0.9) * WW * 0.3, y = WH * 0.3 + Math.sin(t * 1.7) * WH * 0.06, sz = 72;
           if (window.Critters) Critters.draw(ctx, 'bird', x, y, sz, G.t, { fly: true, phase: i * 0.6 });
           else Sprites.draw(ctx, v.sprite, x, y - sz * 0.4, sz * 0.6);
-        } else {                                                // 其它动物：地面草地上走
-          const x = WW * 0.5 + Math.cos(t) * WW * 0.32, yf = WH * 0.74 + Math.sin(t * 1.3) * WH * 0.14, sz = 118;
+        } else {                                                // 其它动物：地面草地上走（更小、更慢）
+          const x = WW * 0.5 + Math.cos(t) * WW * 0.32, yf = WH * 0.74 + Math.sin(t * 1.3) * WH * 0.14, sz = 82;
           Eng.softShadow(ctx, x, yf, sz * 0.22, sz * 0.06, 0.26);
           if (window.Critters) Critters.draw(ctx, v.id, x, yf, sz, G.t, { phase: i * 0.6 });
           else Sprites.draw(ctx, v.sprite, x, yf - sz * 0.4, sz * 0.6);
