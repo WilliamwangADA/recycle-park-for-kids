@@ -180,6 +180,11 @@ window.DATA = (function () {
     desklamp:   { name: '台灯',   sprite: 'i_desklamp',   cost: { metal: 1 },               charm: 3, scale: 0.5,  room: 'bedroom', onTop: true },
     wardrobe:   { name: '衣柜',   sprite: 'i_wardrobe',   cost: { wood: 3 },                charm: 5, scale: 1.4,  room: 'bedroom' },
     crib:       { name: '婴儿床', sprite: 'i_crib',       cost: { wood: 3 },                charm: 5, scale: 1.3,  room: 'bedroom' },
+    // —— 客厅娱乐 ——
+    tvstand:    { name: '电视柜', sprite: 'i_tvstand',    cost: { wood: 2 },                charm: 4, scale: 1.2,  room: 'living', surface: true },
+    console:    { name: '游戏机', sprite: 'i_console',    cost: { plastic: 2 },             charm: 5, scale: 0.5,  room: 'living', onTop: true },
+    gamepad:    { name: '手柄',   sprite: 'i_gamepad',    cost: { plastic: 1 },             charm: 3, scale: 0.35, room: 'living', onTop: true },
+    speaker:    { name: '音响',   sprite: 'i_speaker',    cost: { plastic: 1, metal: 1 },   charm: 4, scale: 0.6,  room: 'living', onTop: true },
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */

@@ -208,6 +208,13 @@
   function drawRiverLife(ctx, S) {
     (S.river || []).forEach(d => { const yy = d.y + Math.sin(d.ph * 2) * 6; ctx.save(); ctx.translate(d.x, yy); if (d.vx < 0) ctx.scale(-1, 1); if (d.kind === 'duck') Sprites.draw(ctx, 'c_duck', 0, 0, 72); else if (window.Marine) Marine.fish(ctx, 0, 0, 52, G.t, d.ph, { body: d.col, fin: d.fin }); ctx.restore(); });
   }
+  function drawParkRiver(ctx, WW, WH, night) {
+    const rw = WH * 0.11; ctx.lineCap = 'round';
+    ctx.strokeStyle = night ? '#2a5578' : '#62bce4'; ctx.lineWidth = rw;
+    ctx.beginPath(); for (let x = -80; x <= WW + 80; x += WW / 30) { const y = WH * 0.5 + Math.sin(x / WW * 6.283) * WH * 0.12; x <= -80 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,.28)'; ctx.lineWidth = rw * 0.16;
+    ctx.beginPath(); for (let x = -80; x <= WW + 80; x += WW / 30) { const y = WH * 0.5 + Math.sin(x / WW * 6.283) * WH * 0.12 - rw * 0.28; x <= -80 ? ctx.moveTo(x, y) : ctx.lineTo(x, y); } ctx.stroke();
+  }
   function drawLake(ctx, l, night, t) {
     const cx = l.cx, cy = l.cy, rx = l.rx, ry = l.ry;
     ctx.fillStyle = night ? '#3a5a44' : '#8ec06e'; ctx.beginPath(); ctx.ellipse(cx, cy, rx + 22, ry + 22, 0, 0, 7); ctx.fill();          // 草岸
@@ -224,12 +231,20 @@
   function parkWorldBg(ctx, WW, WH, S) {
     const night = G.save.night, season = (G.save.season | 0) % 4;
     // 俯视大花园：整片草地 + 多个湖泊水域 + 装饰
-    const GR = SEASON_GRASS[season], gg = ctx.createLinearGradient(0, 0, 0, WH);
-    if (night) { gg.addColorStop(0, '#3f6b47'); gg.addColorStop(1, '#2b4d33'); } else { gg.addColorStop(0, GR[0]); gg.addColorStop(1, GR[1]); }
-    ctx.fillStyle = gg; ctx.fillRect(0, 0, WW, WH);
-    ctx.fillStyle = night ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.06)';
-    for (let i = 0; i < 150; i++) { const x = (i * 337.7) % WW, y = (i * 521.3) % WH; ctx.beginPath(); ctx.ellipse(x, y, 70, 34, 0, 0, 7); ctx.fill(); }
-    ((S.water && S.water.lakes) || []).forEach(l => drawLake(ctx, l, night, G.t));
+    const GR = SEASON_GRASS[season], im = WW * 0.085, iy = WH * 0.12;
+    // 底层：环绕整个地图的水
+    const wg = ctx.createLinearGradient(0, 0, 0, WH); if (night) { wg.addColorStop(0, '#1f4763'); wg.addColorStop(1, '#16374f'); } else { wg.addColorStop(0, '#7fd0ee'); wg.addColorStop(1, '#4aa8d8'); }
+    ctx.fillStyle = wg; ctx.fillRect(0, 0, WW, WH);
+    ctx.strokeStyle = 'rgba(255,255,255,.16)'; ctx.lineWidth = 6; for (let i = 0; i < 80; i++) { const x = (i * 373) % WW, y = (i * 547) % WH; if (x < im || x > WW - im || y < iy || y > WH - iy) { ctx.beginPath(); ctx.ellipse(x + Math.sin(G.t * 0.5 + i) * 8, y, 42, 11, 0, 0, 7); ctx.stroke(); } }
+    // 沙滩岸
+    ctx.fillStyle = night ? '#57795f' : '#e7d59c'; rr(ctx, im - 24, iy - 24, WW - 2 * im + 48, WH - 2 * iy + 48, 150); ctx.fill();
+    // 草地岛
+    const gg = ctx.createLinearGradient(0, iy, 0, WH - iy); if (night) { gg.addColorStop(0, '#3f6b47'); gg.addColorStop(1, '#2b4d33'); } else { gg.addColorStop(0, GR[0]); gg.addColorStop(1, GR[1]); }
+    rr(ctx, im, iy, WW - 2 * im, WH - 2 * iy, 130); ctx.fillStyle = gg; ctx.fill();
+    ctx.save(); rr(ctx, im, iy, WW - 2 * im, WH - 2 * iy, 130); ctx.clip();
+    ctx.fillStyle = night ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.06)'; for (let i = 0; i < 150; i++) { const x = (i * 337.7) % WW, y = (i * 521.3) % WH; ctx.beginPath(); ctx.ellipse(x, y, 70, 34, 0, 0, 7); ctx.fill(); }
+    drawParkRiver(ctx, WW, WH, night);
+    ctx.restore();
     drawRiverLife(ctx, S);
     (S.ambient || []).forEach(a => { if (a.kind === 'flower') flower(ctx, a.x, a.y, a.r, a.c); else if (a.kind === 'grass') grassTuft(ctx, a.x, a.y, a.h); else { ctx.fillStyle = '#9aa7b5'; ctx.beginPath(); ctx.ellipse(a.x, a.y, a.r, a.r * 0.7, 0, 0, 7); ctx.fill(); } });
     if (!night) { if (season === 3) { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 130; i++) { const x = (i * 231) % WW, y = (i * 97) % WH; ctx.beginPath(); ctx.ellipse(x, y, 30, 12, 0, 0, 7); ctx.fill(); } } else { const tint = ['rgba(255,120,175,.08)', null, 'rgba(235,150,50,.12)', null][season]; if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, WW, WH); } } }
@@ -360,7 +375,7 @@
     function s2w(x, y) { return { x: (x - S.cam.x) / S.cam.s, y: (y - S.cam.y) / S.cam.s }; }
     function zoomAt(sx, sy, f) { const w = s2w(sx, sy); S.cam.s = Math.max(sMin(), Math.min(sMin() * 3.4, S.cam.s * f)); S.cam.x = sx - w.x * S.cam.s; S.cam.y = sy - w.y * S.cam.s; clampCam(); }
     function homePos() { const base = listArr().find(p => p.base); return base ? { x: base.x, y: base.y } : { x: WW / 2, y: WH * 0.6 }; }
-    function centerCam() { S.cam.s = opts.rooms ? sMin() * 1.4 : sMin(); const h = opts.rooms ? { x: WW / 2, y: WH * 0.56 } : { x: WW / 2, y: WH / 2 }; S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
+    function centerCam() { S.cam.s = sMin(); const h = { x: WW / 2, y: WH / 2 }; S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
 
     function ensureBase() { if (!opts.base || listArr().some(p => p.base)) return; listArr().unshift({ id: G.save.placeSeq++, item: 'tent', base: true, homeId: '1', x: WW / 2, y: WH * 0.6 }); Eng.persist(); }
     function migrate() {
@@ -383,7 +398,7 @@
       return best;
     }
     function clampWorld(p) { p.x = Math.max(40, Math.min(WW - 40, p.x)); p.y = Math.max(WH * (opts.rooms ? 0.5 : 0.05), Math.min(WH * (opts.rooms ? 1 : 0.97) - 40, p.y)); }
-    function inWater(x, y) { if (!S.water) return false; return S.water.lakes.some(l => { const a = (x - l.cx) / l.rx, b = (y - l.cy) / l.ry; return a * a + b * b <= 1; }); }
+    function inWater(x, y) { if (!S.water) return false; const im = WW * 0.085, iy = WH * 0.12; if (x < im || x > WW - im || y < iy || y > WH - iy) return true; const rc = WH * 0.5 + Math.sin(x / WW * 6.283) * WH * 0.12; return Math.abs(y - rc) < WH * 0.058; }
     function trashZone() { const r = Math.max(44, G.H * 0.07); return { x: G.W / 2 - r * 1.6, y: groundTop() + 6, w: r * 3.2, h: r, r }; }
     function trayLayout() { const ids = trayItems(); const tT = trayTop(), h = G.H * 0.18 - 8, iw = h * 0.92, gap = 10, pad = 12; S.trayMax = Math.max(0, pad * 2 + ids.length * (iw + gap) - G.W); return ids.map((id, i) => ({ id, x: pad + i * (iw + gap) + S.trayScroll, y: tT + 4, w: iw, h: h - 8 })); }
 
@@ -392,13 +407,11 @@
     function initAda() { if (!opts.ada) return; const sv = G.save.adaPos[opts.ada], h = adaHome(), ix = sv ? sv.x : h.x, iy = sv ? sv.y : h.y; S.ada = { x: ix, y: iy, tx: ix, ty: iy, face: 1, wt: 2, moving: false }; }
     function genAmbient() { S.ambient = []; if (opts.rooms) return; const cols = ['#ff6b9d', '#feca57', '#ff9ff3', '#ffffff', '#ff7979']; for (let i = 0; i < 220; i++) { const x = 30 + Math.random() * (WW - 60), y = WH * 0.04 + Math.random() * (WH * 0.92), t = Math.random(); if (inWater(x, y)) continue; if (t < 0.5) S.ambient.push({ kind: 'grass', x, y, h: 16 + Math.random() * 18 }); else if (t < 0.85) S.ambient.push({ kind: 'flower', x, y, r: 7 + Math.random() * 6, c: cols[(Math.random() * cols.length) | 0] }); else S.ambient.push({ kind: 'rock', x, y, r: 9 + Math.random() * 11 }); } }
     function initRiver() {
-      const spec = [[0.2, 0.28, 0.13, 0.09], [0.68, 0.24, 0.15, 0.1], [0.44, 0.6, 0.19, 0.12], [0.83, 0.68, 0.13, 0.09], [0.16, 0.74, 0.12, 0.08], [0.62, 0.84, 0.14, 0.08]];
-      S.water = { lakes: spec.map(l => ({ cx: WW * l[0], cy: WH * l[1], rx: WW * l[2], ry: WH * l[3] })) };
+      S.water = true;
       S.river = []; const fc = [['#ff9ff3', '#e26fd0'], '#f368e0'], gc = [['#7ee0a8', '#3bb878'], '#2fa869'], oc = [['#ffd56b', '#f0a93a'], '#e8902a']; const fish = [fc, gc, oc];
-      S.water.lakes.forEach((lk, i) => {
-        for (let d = 0; d < 1 + (i % 2); d++) S.river.push({ kind: 'duck', lake: lk, x: lk.cx + (Math.random() - .5) * lk.rx, y: lk.cy + (Math.random() - .5) * lk.ry * 0.6, vx: 16 + Math.random() * 12, ph: Math.random() * 6 });
-        for (let f = 0; f < 2; f++) { const c = fish[(i + f) % 3]; S.river.push({ kind: 'fish', lake: lk, x: lk.cx + (Math.random() - .5) * lk.rx, y: lk.cy + (Math.random() - .5) * lk.ry * 0.6, vx: (Math.random() < .5 ? 1 : -1) * (12 + Math.random() * 14), ph: Math.random() * 6, col: c[0], fin: c[1] }); }
-      });
+      const ry = x => WH * 0.5 + Math.sin(x / WW * 6.283) * WH * 0.12;
+      for (let i = 0; i < 6; i++) { const x = WW * (0.16 + Math.random() * 0.68); S.river.push({ kind: 'duck', x, y: ry(x), vx: (Math.random() < .5 ? 1 : -1) * (16 + Math.random() * 12), ph: Math.random() * 6 }); }
+      for (let i = 0; i < 9; i++) { const x = WW * (0.16 + Math.random() * 0.68), c = fish[i % 3]; S.river.push({ kind: 'fish', x, y: ry(x), vx: (Math.random() < .5 ? 1 : -1) * (14 + Math.random() * 14), ph: Math.random() * 6, col: c[0], fin: c[1] }); }
     }
 
     S.enter = function (arg) {
@@ -418,7 +431,7 @@
     S.onPinchEnd = function () { S._pinchInit = false; if (S.rotTarget) { Eng.persist(); S.rotTarget = null; } };
     S.update = function (dt) {
       if (opts.ada && S.ada) S.ada.moving = false;            // 公主停在原地，不再自由走动
-      if (opts.river && S.river) S.river.forEach(d => { d.ph += dt; if (d.lake) { d.x += d.vx * dt; const nx = (d.x - d.lake.cx) / d.lake.rx; if (Math.abs(nx) > 0.82) { d.vx = -d.vx; d.x = d.lake.cx + Math.sign(nx) * 0.82 * d.lake.rx; } } });
+      if (opts.river && S.river) S.river.forEach(d => { d.ph += dt; d.x += d.vx * dt; if (d.x < WW * 0.13 || d.x > WW * 0.87) d.vx = -d.vx; d.y = WH * 0.5 + Math.sin(d.x / WW * 6.283) * WH * 0.12; });
       if (opts.weather) {                                     // 季节飘落：春花瓣 / 秋落叶 / 冬雪
         const sp = ['petal', 'none', 'leaf', 'snow'][(G.save.season | 0) % 4];
         if (sp !== 'none') {
