@@ -370,8 +370,13 @@
     function surfaceTopY(p) { return p.y - dispS(p.item) * 0.16; }
     function childrenOf(id) { return listArr().filter(c => c.onId === id); }
 
-    function sMin() { return Math.max(G.W / WW, (vBot() - vTop()) / WH); }
-    function clampCam() { S.cam.s = Math.max(sMin(), Math.min(sMin() * 3.4, S.cam.s)); const s = S.cam.s; S.cam.x = Math.max(G.W - WW * s, Math.min(0, S.cam.x)); S.cam.y = Math.max(vBot() - WH * s, Math.min(vTop(), S.cam.y)); }
+    function sMin() { return opts.rooms ? Math.max(G.W / WW, (vBot() - vTop()) / WH) : Math.min(G.W / WW, (vBot() - vTop()) / WH); }   // 乐园=全图适配(可露水色背景)，房间=铺满
+    function clampCam() {
+      S.cam.s = Math.max(sMin(), Math.min(sMin() * 4, S.cam.s));
+      const s = S.cam.s, mapW = WW * s, mapH = WH * s, vt = vTop(), vb = vBot(), vh = vb - vt;
+      S.cam.x = mapW <= G.W ? (G.W - mapW) / 2 : Math.max(G.W - mapW, Math.min(0, S.cam.x));
+      S.cam.y = mapH <= vh ? vt + (vh - mapH) / 2 : Math.max(vb - mapH, Math.min(vt, S.cam.y));
+    }
     function s2w(x, y) { return { x: (x - S.cam.x) / S.cam.s, y: (y - S.cam.y) / S.cam.s }; }
     function zoomAt(sx, sy, f) { const w = s2w(sx, sy); S.cam.s = Math.max(sMin(), Math.min(sMin() * 3.4, S.cam.s * f)); S.cam.x = sx - w.x * S.cam.s; S.cam.y = sy - w.y * S.cam.s; clampCam(); }
     function homePos() { const base = listArr().find(p => p.base); return base ? { x: base.x, y: base.y } : { x: WW / 2, y: WH * 0.6 }; }
@@ -418,12 +423,14 @@
       if (opts.rooms) { S.homeId = (arg && arg.homeId) || S.homeId || '1'; if (!G.save.homes[S.homeId]) G.save.homes[S.homeId] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; S.room = (arg && arg.room) || 'living'; }
       S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; S.rotTarget = null; S._pinchInit = false; S.wparts = []; S.fw = []; S.fwT = 1.5;
       migrate(); ensureBase(); if (opts.river) initRiver(); genAmbient(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice);
+      if (!opts.rooms) { S.zoomTip = (G.save.zoomHint || 0) < 4; if (S.zoomTip) { G.save.zoomHint = (G.save.zoomHint || 0) + 1; Eng.persist(); } }   // 前4次进乐园提示可缩放
     };
     S.setRoom = function (rm) { if (S.room === rm) return; S.room = rm; S.drag = null; S.pan = null; S.rotTarget = null; centerCam(); Audio2.sfx('click'); };
     S.resize = function () { clampCam(); };
     S.cancelDrag = function () { S.drag = null; S.pan = null; S.trayDrag = null; S._pinchInit = false; };
-    S.wheel = function (dy) { zoomAt(G.pointer.x, G.pointer.y, dy < 0 ? 1.12 : 0.9); };
+    S.wheel = function (dy) { S.zoomTip = false; zoomAt(G.pointer.x, G.pointer.y, dy < 0 ? 1.12 : 0.9); };
     S.onPinch = function (factor, cx, cy, da) {
+      S.zoomTip = false;
       if (!S._pinchInit) { const w = s2w(cx, cy); const p = pickPlaced(w.x, w.y); S.rotTarget = (p && !p.base) ? p : null; S._pinchInit = true; }
       if (S.rotTarget) { S.rotTarget.rot = (S.rotTarget.rot || 0) + da; }
       else zoomAt(cx, cy, factor);
@@ -521,7 +528,7 @@
     S.draw = function (ctx) {
       S.buttons = [];
       const vt = vTop(), vb = vBot();
-      ctx.fillStyle = opts.rooms ? '#efe6d8' : '#dff1ff';   // 铺满整屏，视口外不露上一个场景
+      ctx.fillStyle = opts.rooms ? '#efe6d8' : '#7fd0ee';   // 房间暖色 / 乐园水色(延续周边水域)
       ctx.fillRect(0, 0, G.W, G.H);
       ctx.save();
       ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
@@ -606,6 +613,14 @@
         else { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillStyle = ['#e08a3a', '#d9a93a', '#c96a3a'][(p.ph * 3 | 0) % 3]; ctx.beginPath(); ctx.ellipse(0, 0, p.r * 1.6, p.r * 0.7, 0, 0, 7); ctx.fill(); ctx.strokeStyle = 'rgba(120,70,30,.5)'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(-p.r * 1.4, 0); ctx.lineTo(p.r * 1.4, 0); ctx.stroke(); ctx.restore(); }
       });
       ctx.restore();
+      // 前几次进乐园：提示可缩放地图
+      if (S.zoomTip) {
+        const tw = Math.min(G.W * 0.82, 620), th = Math.max(48, G.H * 0.075), tx = (G.W - tw) / 2, ty = vt + 16;
+        ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.3)'; ctx.shadowBlur = 12; ctx.shadowOffsetY = 4;
+        rr(ctx, tx, ty, tw, th, th * 0.42); ctx.fillStyle = 'rgba(38,48,70,.86)'; ctx.fill(); ctx.restore();
+        ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(th * 0.34) + 'px "PingFang SC",sans-serif';
+        ctx.fillText('🤏 两个手指捏一捏，可以放大 / 缩小地图哦~', G.W / 2, ty + th / 2);
+      }
     },
     nav: (S, ctx, bw, bh) => {
       const ob = { x: G.W - bw * 2 - 22, y: 12, w: bw, h: bh, label: '🌊 去大海', color: '#2e86de', fs: Math.round(bh * 0.3), onTap: () => Eng.go('ocean', DATA.LEVELS[0]) };
