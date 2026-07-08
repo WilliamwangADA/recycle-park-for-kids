@@ -131,8 +131,8 @@
       const s = G.H * 0.115, it = { id: pick(pool), x: 50 + Math.random() * (G.W - 100), s, ph: Math.random() * 6.28 };
       if (ocean.water) {                                  // 水里漂浮
         it.y = top + Math.random() * (bot - top); it.vx = (Math.random() - .5) * 14; it.vy = (Math.random() - .5) * 10; it.ang = (Math.random() - .5) * 0.35; it.va = (Math.random() - .5) * 0.2;
-      } else {                                            // 陆地：躺在地上
-        it.rest = sandTop() - s * 0.16 - Math.random() * G.H * 0.015;
+      } else {                                            // 陆地：散落在桶上方的草地上（不落到桶后被挡）
+        it.rest = sandTop() - s * 0.3 - Math.random() * G.H * 0.17;
         it.y = it.rest; it.vx = (Math.random() - .5) * 6; it.vy = 0; it.ang = (Math.random() - .5) * 0.5; it.va = 0; it.spin = (Math.random() - .5) * 0.2;
       }
       ocean.items.push(it);
@@ -445,7 +445,7 @@
         if (ocean.binAnim[id]) { open = Math.max(open, Math.sin((1 - ocean.binAnim[id] / 0.5) * Math.PI)); jump = Math.sin((1 - ocean.binAnim[id] / 0.5) * Math.PI); }
         if (ocean.binHint[id]) open = Math.max(open, Math.abs(Math.sin((1.5 - ocean.binHint[id]) * 10)));
         if (ocean.hoverBin === id) open = Math.max(open, 0.85);
-        const bw = r.w * 0.58, bh = bw * _bimg.height / _bimg.width;
+        const bw = r.w * 0.5, bh = bw * _bimg.height / _bimg.width;
         const bx = r.x + r.w / 2, by = r.y + r.h - 2;
         Eng.softShadow(ctx, bx, by - 4, bw * 0.44, bh * 0.05, 0.3);
         ctx.save(); ctx.translate(bx, by - jump * 8);

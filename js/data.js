@@ -66,6 +66,19 @@ window.DATA = (function () {
     ceramic:    { name: '碎陶瓷',   sprite: 't_ceramic',    bin: 'other',   yield: null },
     tissue:     { name: '脏纸巾',   sprite: 't_tissue',     bin: 'other',   yield: null },
     cig:        { name: '烟头',     sprite: 't_cig',        bin: 'other',   yield: null },
+    // —— 再增一批垃圾 ——
+    foil:        { name: '锡纸球',   sprite: 't_foil',        bin: 'recycle', yield: 'metal' },
+    cd:          { name: '旧光盘',   sprite: 't_cd',          bin: 'recycle', yield: 'plastic' },
+    cap:         { name: '瓶盖',     sprite: 't_cap',         bin: 'recycle', yield: 'plastic' },
+    wire:        { name: '旧电线',   sprite: 't_wire',        bin: 'recycle', yield: 'metal' },
+    bread:       { name: '面包块',   sprite: 't_bread',       bin: 'kitchen', yield: null },
+    shrimp:      { name: '虾壳',     sprite: 't_shrimp',      bin: 'kitchen', yield: null },
+    rind:        { name: '西瓜皮',   sprite: 't_rind',        bin: 'kitchen', yield: null },
+    bone:        { name: '大骨头',   sprite: 't_bone',        bin: 'kitchen', yield: null },
+    lighter:     { name: '打火机',   sprite: 't_lighter',     bin: 'hazard',  yield: null },
+    thermo:      { name: '温度计',   sprite: 't_thermo',      bin: 'hazard',  yield: null },
+    polish:      { name: '指甲油',   sprite: 't_polish',      bin: 'hazard',  yield: null },
+    sponge:      { name: '旧海绵',   sprite: 't_sponge',      bin: 'other',   yield: null },
   };
 
   /* ---- 可制造物品 ----
@@ -148,19 +161,19 @@ window.DATA = (function () {
   // unlocked 仅表示初始解锁（大海）；其余靠通关前一关解锁（见场景 isUnlocked）
   const LEVELS = [
     { id: 'ocean',  name: '大海', theme: 'ocean', icon: '🌊', unlocked: true, tool: 'net',
-      trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot','mask','straw','jar','chicken','corn','ceramic','medicine','tissue','cig'] },
+      trash: ['bottle','bag','cup','can','tin','glass','box','news','driftwood','plank','tire','banana','fishbone','battery','foam','boot','mask','straw','jar','chicken','corn','ceramic','medicine','tissue','cig','foil','cap','shrimp','sponge','rind'] },
     { id: 'park',   name: '公园', theme: 'park',  icon: '🌳', unlocked: false, tool: 'tongs',
-      trash: ['bottle','bag','cup','can','news','banana','apple','foam','icecream','juicebox','chips','corn','teabag','spray','magazine'] },
+      trash: ['bottle','bag','cup','can','news','banana','apple','foam','icecream','juicebox','chips','corn','teabag','spray','magazine','cd','cap','bread','rind','lighter','sponge','bone'] },
     { id: 'town',   name: '小区', theme: 'town',  icon: '🏘️', unlocked: false, tool: 'broom',
-      trash: ['box','bottle','can','battery','apple','foam','news','bag','coffee','mask','chips','magazine','medicine','tissue','jar'] },
+      trash: ['box','bottle','can','battery','apple','foam','news','bag','coffee','mask','chips','magazine','medicine','tissue','jar','wire','lighter','polish','foil'] },
     { id: 'school', name: '学校', theme: 'school',icon: '🏫', unlocked: false, tool: 'tongs',
-      trash: ['news','cup','glass','apple','bulb','box','pencil','juicebox','egg','chips','straw','magazine','teabag','spray'] },
+      trash: ['news','cup','glass','apple','bulb','box','pencil','juicebox','egg','chips','straw','magazine','teabag','spray','cd','bread','thermo','sponge'] },
     { id: 'forest', name: '森林', theme: 'forest',icon: '🌲', unlocked: false, tool: 'tongs',
-      trash: ['bottle','bag','can','banana','apple','foam','box','glass','icecream','egg','chicken','corn','cig','jar'] },
+      trash: ['bottle','bag','can','banana','apple','foam','box','glass','icecream','egg','chicken','corn','cig','jar','cap','bread','shrimp','bone'] },
     { id: 'mount',  name: '大山', theme: 'mount', icon: '⛰️', unlocked: false, tool: 'broom',
-      trash: ['glass','tin','box','apple','battery','bottle','can','foam','coffee','chips','spray','ceramic','jar','paint'] },
+      trash: ['glass','tin','box','apple','battery','bottle','can','foam','coffee','chips','spray','ceramic','jar','paint','wire','thermo','rind','bone'] },
     { id: 'city',   name: '城市', theme: 'city',  icon: '🏙️', unlocked: false, tool: 'broom',
-      trash: ['bottle','can','box','foam','bulb','battery','cup','bag','pizza','mask','coffee','chips','magazine','straw','paint','cig','tissue','medicine'] },
+      trash: ['bottle','can','box','foam','bulb','battery','cup','bag','pizza','mask','coffee','chips','magazine','straw','paint','cig','tissue','medicine','foil','cd','wire','lighter','polish'] },
   ];
 
   /* ---- 乐园访客（人气达标解锁）---- */
