@@ -200,8 +200,24 @@
   const SEASON_SKY = [['#bfe8ff', '#e9f8ec'], ['#9fd8ff', '#dff6ec'], ['#d6e6ee', '#f4ead4'], ['#cfe0ea', '#eef4f6']];
   const SEASON_GRASS = [['#bfe86a', '#8fcf52'], ['#a6e36a', '#79c047'], ['#d8c46a', '#b89a48'], ['#e3eef0', '#c3d6dc']];
   const SEASON_HILL = ['#9ad27a', '#9ad27a', '#c4ab58', '#d3e4e8'];
+  // —— AI 背景图懒加载（放 assets/sprites/park_bg.png / room_<房间>.png 自动启用）——
+  let PARK_IMG = null, _parkTried = false;
+  function parkImg() { if (_parkTried) return PARK_IMG; _parkTried = true; if (typeof Image === 'undefined') return null; const im = new Image(); im.onload = () => PARK_IMG = im; im.onerror = () => {}; im.src = 'assets/sprites/park_bg.png'; return null; }
+  const ROOM_IMG = {}, _roomTried = {};
+  function roomImg(room) { if (_roomTried[room]) return ROOM_IMG[room] || null; _roomTried[room] = true; if (typeof Image === 'undefined') return null; const im = new Image(); im.onload = () => ROOM_IMG[room] = im; im.onerror = () => {}; im.src = 'assets/sprites/room_' + room + '.png'; return null; }
+  function drawRiverLife(ctx, S) {
+    (S.river || []).forEach(d => { const yy = d.y + Math.sin(d.ph * 2) * 6; ctx.save(); ctx.translate(d.x, yy); if (d.vx < 0) ctx.scale(-1, 1); if (d.kind === 'duck') Sprites.draw(ctx, 'c_duck', 0, 0, 72); else if (window.Marine) Marine.fish(ctx, 0, 0, 52, G.t, d.ph, { body: d.col, fin: d.fin }); ctx.restore(); });
+  }
   function parkWorldBg(ctx, WW, WH, S) {
     const night = G.save.night, season = (G.save.season | 0) % 4, riverY = WH * 0.66;
+    const _pimg = PARK_IMG || parkImg();
+    if (_pimg) {                                            // AI 乐园背景图 + 河生物 + 昼夜/季节覆盖
+      ctx.drawImage(_pimg, 0, 0, WW, WH);
+      drawRiverLife(ctx, S);
+      if (!night) { const tint = ['rgba(255,120,175,.12)', null, 'rgba(235,150,50,.17)', 'rgba(208,232,255,.32)'][season]; if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, WW, WH); } if (season === 3) { ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 50; i++) { const x = (i * 231) % WW, y = WH * 0.5 + (i * 97) % (WH * 0.46); ctx.beginPath(); ctx.ellipse(x, y, 26, 10, 0, 0, 7); ctx.fill(); } } }
+      else { ctx.fillStyle = 'rgba(16,24,52,.46)'; ctx.fillRect(0, 0, WW, WH); ctx.fillStyle = '#fdf6c0'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.12, WH * 0.045, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(16,24,52,1)'; ctx.beginPath(); ctx.arc(WW * 0.835, WH * 0.106, WH * 0.04, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const x = (i * 167.3) % WW, y = (i * 51.7) % (WH * 0.36); ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(G.t * 1.5 + i)); ctx.fillRect(x, y, 2.4, 2.4); } ctx.globalAlpha = 1; }
+      return;
+    }
     const sky = ctx.createLinearGradient(0, 0, 0, WH * 0.44);
     if (night) { sky.addColorStop(0, '#16223f'); sky.addColorStop(1, '#33456a'); }
     else { sky.addColorStop(0, SEASON_SKY[season][0]); sky.addColorStop(1, SEASON_SKY[season][1]); }
@@ -243,10 +259,13 @@
 
   function tentRoomBg(ctx, WW, WH, S) {
     const home = G.save.homes[S.homeId] || G.save.homes['1'], st = HOME_STYLES[(home.style || 0) % HOME_STYLES.length], room = S.room || 'living', fY = WH * 0.6;
+    const _rimg = ROOM_IMG[room] || roomImg(room);
+    if (_rimg) { ctx.drawImage(_rimg, 0, 0, WW, WH); return; }   // AI 房间背景图（空房间，不预置家具）
+    // 无图时：简洁的墙 + 地板，不放任何家具（玩家自己摆）
     const wg = ctx.createLinearGradient(0, 0, 0, fY); wg.addColorStop(0, st.wall[0]); wg.addColorStop(1, st.wall[1]); ctx.fillStyle = wg; ctx.fillRect(0, 0, WW, fY);
     const fg = ctx.createLinearGradient(0, fY, 0, WH); fg.addColorStop(0, st.floor[0]); fg.addColorStop(1, st.floor[1]); ctx.fillStyle = fg; ctx.fillRect(0, fY, WW, WH - fY);
-    ctx.strokeStyle = 'rgba(90,60,30,.16)'; ctx.lineWidth = 2; for (let i = 1; i < 7; i++) { const y = fY + i / 7 * (WH - fY); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WW, y); ctx.stroke(); }
     ctx.fillStyle = 'rgba(120,80,40,.3)'; ctx.fillRect(0, fY - 10, WW, 10);
+    return;
 
     if (room === 'living') {
       rwin(ctx, WW * 0.5, fY - WH * 0.34, WW * 0.22, WH * 0.2);
