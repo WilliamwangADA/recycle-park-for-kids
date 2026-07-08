@@ -370,7 +370,7 @@
     function surfaceTopY(p) { return p.y - dispS(p.item) * 0.16; }
     function childrenOf(id) { return listArr().filter(c => c.onId === id); }
 
-    function sMin() { return opts.rooms ? Math.max(G.W / WW, (vBot() - vTop()) / WH) : Math.min(G.W / WW, (vBot() - vTop()) / WH); }   // 乐园=全图适配(可露水色背景)，房间=铺满
+    function sMin() { return Math.max(G.W / WW, (vBot() - vTop()) / WH); }   // 填满视口(默认全屏铺满)
     function clampCam() {
       S.cam.s = Math.max(sMin(), Math.min(sMin() * 4, S.cam.s));
       const s = S.cam.s, mapW = WW * s, mapH = WH * s, vt = vTop(), vb = vBot(), vh = vb - vt;
@@ -487,7 +487,7 @@
       if (!S.drag) return;
       S.drag.scrX = x; S.drag.scrY = y;
       const w = s2w(x, y);
-      if (S.drag.kind === 'ada') { const nx = w.x - S.drag.dx, ny = w.y - S.drag.dy; if (Math.abs(nx - S.ada.x) > 1) S.ada.face = nx > S.ada.x ? 1 : -1; S.ada.x = Math.max(60, Math.min(WW - 60, nx)); S.ada.y = Math.max(WH * 0.44, Math.min(WH - 50, ny)); return; }
+      if (S.drag.kind === 'ada') { const nx = w.x - S.drag.dx, ny = w.y - S.drag.dy; if (Math.abs(nx - S.ada.x) > 1) S.ada.face = nx > S.ada.x ? 1 : -1; S.ada.x = Math.max(60, Math.min(WW - 60, nx)); S.ada.y = Math.max(WH * (opts.rooms ? 0.44 : 0.06), Math.min(WH * (opts.rooms ? 1 : 0.94) - 50, ny)); return; }
       if (S.drag.kind === 'placed') { const p = S.drag.p; p.x = w.x - S.drag.dx; p.y = w.y - S.drag.dy; clampWorld(p); }
     };
     S.up = function (x, y) {
