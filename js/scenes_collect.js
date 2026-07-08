@@ -113,16 +113,16 @@
     } else if (ocean.cfg.critters.length) {
       for (let i = 0; i < 6; i++) ocean.critters.push(newCritter());
     }
-    ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
+    ocean.bubbles = []; ocean.ripples = []; ocean.binAnim = {}; ocean.binHint = {}; ocean.hoverBin = null; ocean.drag = null; ocean.shakeT = 0; ocean.trailT = 0;
     ocean.tool = ocean.lv.tool || 'net'; ocean.scoopT = 0; ocean.droplets = []; ocean.combo = 0; ocean.comboT = 0;
     ocean.justCleared = false; ocean.firstClear = false; ocean.nextLv = null;
     Audio2.sfx('splash'); Audio2.voice(ocean.water ? 'ocean_intro' : 'land_intro');
   };
   ocean.resize = function () { if (ocean.water) Marine.init(G.W, G.H); setupDecor(); };
   function waterTop() { return Math.max(44, G.H * 0.072) + 10 + Math.max(40, G.H * 0.066) + 12; } // 计分牌 + 控制行
-  function binH() { return G.H * 0.15; }
-  function binsTop() { return G.H - binH() - 8; }
-  function sandTop() { return binsTop() - G.H * 0.04; }
+  function sandTop() { return G.H * 0.72; }          // 沙底线=桶区顶，垃圾漂浮不低于此（桶不挡垃圾）
+  function binsTop() { return sandTop(); }            // 桶点击区顶
+  function binH() { return G.H - binsTop() - 2; }     // 桶区一直到屏幕底
 
   function spawnTrash(count) {
     ocean.items = [];
@@ -271,10 +271,15 @@
       if (ocean.combo >= 3) Eng.floatText(x, y - best.s * 0.6, (ocean.water ? '连捞 ×' : '连捡 ×') + ocean.combo + '! 好准!', '#ffe066');
     } else { ocean.combo = 0; }                          // 挥空，断连击（技巧）
   };
-  ocean._move = function (x, y) { if (ocean.drag) { ocean.drag.it.x = x - ocean.drag.dx; ocean.drag.it.y = y - ocean.drag.dy; ocean.drag.it.va = 0; ocean.drag.it.ang *= 0.8; } };
+  ocean._move = function (x, y) {
+    if (!ocean.drag) return;
+    ocean.drag.it.x = x - ocean.drag.dx; ocean.drag.it.y = y - ocean.drag.dy; ocean.drag.it.va = 0; ocean.drag.it.ang *= 0.8;
+    const h = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - 30);   // 拖到桶口→该桶开盖
+    ocean.hoverBin = h ? h.bin.id : null;
+  };
   ocean._up = function (x, y) {
-    const d = ocean.drag; ocean.drag = null; if (!d) return;
-    const r = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - r.h * 1.1);
+    const d = ocean.drag; ocean.drag = null; ocean.hoverBin = null; if (!d) return;
+    const r = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - 30);
     if (!r) { d.it.vx = (Math.random() - .5) * 20; d.it.vy = ocean.water ? -10 : -120; return; }   // 没投进：水里继续漂 / 陆地抛回落地
     const t = DATA.TRASH[d.it.id];
     if (t.bin === r.bin.id) {
@@ -290,8 +295,12 @@
       Eng.persist();
       if (ocean.items.length === 0 && !ocean.justCleared) completeLevel();   // 全清理完=通关
     } else {
-      Audio2.sfx('bad'); ocean.shakeT = 0.45; d.it.vy = -30; d.it.vx = (Math.random() - .5) * 30;
-      Eng.floatText(x, y - 20, '不是这个桶哦~', '#ff7675'); Audio2.voice('wrong');
+      // 放错桶：垃圾弹回水中（不藏桶后），正确的桶开合几次盖子提示
+      Audio2.sfx('bad'); ocean.shakeT = 0.4;
+      d.it.y = sandTop() - d.it.s * 0.6 - 30; d.it.x = Math.max(50, Math.min(G.W - 50, x));
+      d.it.vy = ocean.water ? -70 : -280; d.it.vx = (Math.random() - .5) * 50; d.it.ang = 0; d.it.va = (Math.random() - .5) * 4;
+      Eng.floatText(x, y - 20, '不是这个桶哦，看那个桶!', '#ff7675'); Audio2.voice('wrong');
+      ocean.binHint[t.bin] = 1.5;                                    // 正确的桶盖开合提示
     }
   };
 
@@ -341,6 +350,7 @@
     // 涟漪 + 分类箱开盖动画
     for (let i = ocean.ripples.length - 1; i >= 0; i--) { ocean.ripples[i].age += dt; if (ocean.ripples[i].age > ocean.ripples[i].max) ocean.ripples.splice(i, 1); }
     for (const k in ocean.binAnim) { ocean.binAnim[k] -= dt; if (ocean.binAnim[k] <= 0) delete ocean.binAnim[k]; }
+    for (const k in ocean.binHint) { ocean.binHint[k] -= dt; if (ocean.binHint[k] <= 0) delete ocean.binHint[k]; }
     // 工具挥动动画 / 连击 / 网中滴水
     if (ocean.scoopT > 0) ocean.scoopT -= dt;
     if (ocean.comboT > 0) { ocean.comboT -= dt; if (ocean.comboT <= 0) ocean.combo = 0; }
@@ -429,15 +439,32 @@
     binRects().forEach(r => {
       const _bimg = binImg(r.bin.id);
       if (_bimg) {
-        const jump = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
-        const bw = r.w * 0.66, bh = bw * _bimg.height / _bimg.width;
-        const bx = r.x + r.w / 2, by = r.y + r.h * 0.99, sc = 1 + jump * 0.09;
-        Eng.softShadow(ctx, bx, by - 4, bw * 0.42, bh * 0.05, 0.3);
-        ctx.save(); ctx.translate(bx, by - jump * 12); ctx.scale(sc, sc); ctx.drawImage(_bimg, -bw / 2, -bh, bw, bh); ctx.restore();
+        const id = r.bin.id, col = r.bin.color;
+        // 开盖程度 open：吞垃圾单开 / 提示多次开合 / 拖到桶口悬停常开
+        let open = 0, jump = 0;
+        if (ocean.binAnim[id]) { open = Math.max(open, Math.sin((1 - ocean.binAnim[id] / 0.5) * Math.PI)); jump = Math.sin((1 - ocean.binAnim[id] / 0.5) * Math.PI); }
+        if (ocean.binHint[id]) open = Math.max(open, Math.abs(Math.sin((1.5 - ocean.binHint[id]) * 10)));
+        if (ocean.hoverBin === id) open = Math.max(open, 0.85);
+        const bw = r.w * 0.58, bh = bw * _bimg.height / _bimg.width;
+        const bx = r.x + r.w / 2, by = r.y + r.h - 2;
+        Eng.softShadow(ctx, bx, by - 4, bw * 0.44, bh * 0.05, 0.3);
+        ctx.save(); ctx.translate(bx, by - jump * 8);
+        ctx.drawImage(_bimg, -bw / 2, -bh, bw, bh);
+        // 程序化桶盖（盖住图里的桶口，开盖时绕后铰链向后掀起露出桶内）
+        const capCy = -bh * 0.82, capRx = bw * 0.44, capRy = bh * 0.095;
+        ctx.save(); ctx.translate(0, capCy - capRy); ctx.rotate(-open * 1.15);
+        const cg = ctx.createLinearGradient(0, -capRy, 0, capRy * 2); cg.addColorStop(0, lighten(col, 22)); cg.addColorStop(1, lighten(col, -18));
+        ctx.fillStyle = cg; ctx.beginPath(); ctx.ellipse(0, capRy, capRx, capRy * 1.5, 0, 0, 7); ctx.fill();
+        ctx.lineWidth = 2.5; ctx.strokeStyle = lighten(col, -34); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.beginPath(); ctx.ellipse(-capRx * 0.18, capRy * 0.55, capRx * 0.5, capRy * 0.5, 0, 0, 7); ctx.fill();
+        ctx.restore();
+        ctx.restore();
+        // 名字（桶上方）
         ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
         ctx.font = 'bold ' + Math.round(r.w * 0.135) + 'px "PingFang SC",sans-serif';
-        ctx.lineWidth = 4.5; ctx.strokeStyle = 'rgba(0,0,0,.34)'; ctx.strokeText(r.bin.name, bx, by - bh - r.h * 0.05);
-        ctx.fillStyle = '#fff'; ctx.fillText(r.bin.name, bx, by - bh - r.h * 0.05);
+        const ny = by - bh - r.h * 0.03;
+        ctx.lineWidth = 4.5; ctx.strokeStyle = 'rgba(0,0,0,.34)'; ctx.strokeText(r.bin.name, bx, ny);
+        ctx.fillStyle = '#fff'; ctx.fillText(r.bin.name, bx, ny);
         return;
       }
       const c = r.bin.color, open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
