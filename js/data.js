@@ -122,7 +122,7 @@ window.DATA = (function () {
     picture:  { name: '挂画',   sprite: 'i_picture',  cost: { paper: 1, wood: 1 },       charm: 2, scale: 0.55, room: 'living' },
     clock:    { name: '座钟',   sprite: 'i_clock',    cost: { metal: 1, glass: 1 },      charm: 2, scale: 0.55, onTop: true, room: 'living' },
     candle:   { name: '蜡烛',   sprite: 'i_candle',   cost: { wood: 1 },                 charm: 2, scale: 0.4,  onTop: true, room: 'living' },
-    vase:     { name: '花瓶',   sprite: 'i_vase',     cost: { glass: 1, paper: 1 },      charm: 3, scale: 0.5,  onTop: true, room: 'living' },
+    vase:     { name: '花瓶',   sprite: 'i_vase',     cost: { glass: 1, paper: 1 },      charm: 3, scale: 0.5,  onTop: true, surface: true, room: 'living' },
     guitar:   { name: '吉他',   sprite: 'i_guitar',   cost: { wood: 2, plastic: 1 },     charm: 4, scale: 0.95, room: 'living' },
     piano:    { name: '钢琴',   sprite: 'i_piano',    cost: { wood: 4, metal: 2 },       charm: 7, scale: 1.2, room: 'living' },
     lantern:  { name: '灯笼',   sprite: 'i_lantern',  cost: { paper: 1, metal: 1 },      charm: 3, scale: 0.6,  room: 'living' },
@@ -151,10 +151,18 @@ window.DATA = (function () {
     robot:    { name: '机器人', sprite: 'i_robot',    cost: { metal: 2, plastic: 1 },    charm: 4, scale: 0.7 },
     ball:     { name: '皮球',   sprite: 'i_ball',     cost: { rubber: 1 },               charm: 2, scale: 0.5 },
     trophy:   { name: '奖杯',   sprite: 'i_trophy',   cost: { metal: 2, glass: 1 },      charm: 4, scale: 0.5,  onTop: true },
-    sunflower:{ name: '向日葵', sprite: 'i_sunflower',cost: { paper: 1 },                charm: 3, scale: 0.7 },
+    sunflower:{ name: '向日葵', sprite: 'i_sunflower',cost: { paper: 1 },                charm: 3, scale: 0.55, onTop: true },
     rose:     { name: '玫瑰',   sprite: 'i_rose',     cost: { paper: 1 },                charm: 2, scale: 0.45, onTop: true },
     xmastree: { name: '圣诞树', sprite: 'i_xmastree', cost: { wood: 3, glass: 2 },       charm: 7, scale: 1.5 },
     snowman:  { name: '雪人',   sprite: 'i_snowman',  cost: { glass: 2 },                charm: 4, scale: 1.0 },
+    // —— 可放水里的物品（只能放到水域）——
+    boat:       { name: '小船',   sprite: 'i_boat',       cost: { wood: 3, metal: 1 },      charm: 7, scale: 1.3,  water: true },
+    sailboat:   { name: '帆船',   sprite: 'i_sailboat',   cost: { wood: 2, paper: 2 },      charm: 7, scale: 1.2,  water: true },
+    rubberduck: { name: '橡皮鸭', sprite: 'i_rubberduck', cost: { rubber: 2 },              charm: 4, scale: 0.5,  water: true },
+    swimring:   { name: '游泳圈', sprite: 'i_swimring',   cost: { rubber: 2, plastic: 1 },  charm: 4, scale: 0.85, water: true },
+    // —— 可插进花瓶的花 ——
+    bouquet:    { name: '花束',   sprite: 'i_bouquet',    cost: { paper: 2 },               charm: 5, scale: 0.6,  onTop: true },
+    tulip:      { name: '郁金香', sprite: 'i_tulip',      cost: { paper: 1 },               charm: 3, scale: 0.45, onTop: true },
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */

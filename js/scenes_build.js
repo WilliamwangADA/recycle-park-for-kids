@@ -208,16 +208,34 @@
   function drawRiverLife(ctx, S) {
     (S.river || []).forEach(d => { const yy = d.y + Math.sin(d.ph * 2) * 6; ctx.save(); ctx.translate(d.x, yy); if (d.vx < 0) ctx.scale(-1, 1); if (d.kind === 'duck') Sprites.draw(ctx, 'c_duck', 0, 0, 72); else if (window.Marine) Marine.fish(ctx, 0, 0, 52, G.t, d.ph, { body: d.col, fin: d.fin }); ctx.restore(); });
   }
+  function drawLake(ctx, l, night, t) {
+    const cx = l.cx, cy = l.cy, rx = l.rx, ry = l.ry;
+    ctx.fillStyle = night ? '#3a5a44' : '#8ec06e'; ctx.beginPath(); ctx.ellipse(cx, cy, rx + 22, ry + 22, 0, 0, 7); ctx.fill();          // 草岸
+    ctx.fillStyle = night ? '#57795f' : '#e3d29a'; ctx.beginPath(); ctx.ellipse(cx, cy, rx + 11, ry + 11, 0, 0, 7); ctx.fill();          // 沙滩
+    const wg = ctx.createRadialGradient(cx, cy - ry * 0.3, ry * 0.2, cx, cy, rx * 1.1);
+    if (night) { wg.addColorStop(0, '#2f5578'); wg.addColorStop(1, '#193a58'); } else { wg.addColorStop(0, '#9fe0f4'); wg.addColorStop(1, '#3f9ad2'); }
+    ctx.fillStyle = wg; ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.fill();
+    ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, 7); ctx.clip();
+    ctx.strokeStyle = 'rgba(255,255,255,.32)'; ctx.lineWidth = Math.max(2, ry * 0.028);
+    for (let i = 0; i < 4; i++) { const yy = cy - ry * 0.5 + i * ry * 0.32; ctx.beginPath(); ctx.ellipse(cx + Math.sin(t * 0.5 + i) * rx * 0.08, yy, rx * (0.55 - i * 0.09), ry * 0.05, 0, 0, 7); ctx.stroke(); }
+    ctx.fillStyle = night ? '#2e5a3e' : '#37b06f'; for (let i = 0; i < 4; i++) { const a = i * 1.7 + cx * 0.01, lx = cx + Math.cos(a) * rx * 0.55, ly = cy + Math.sin(a) * ry * 0.55; ctx.beginPath(); ctx.ellipse(lx, ly, ry * 0.13, ry * 0.11, 0, 0, 7); ctx.fill(); }   // 睡莲
+    ctx.restore();
+  }
   function parkWorldBg(ctx, WW, WH, S) {
-    const night = G.save.night, season = (G.save.season | 0) % 4, riverY = WH * 0.66;
-    const _pimg = PARK_IMG || parkImg();
-    if (_pimg) {                                            // AI 乐园背景图 + 河生物 + 昼夜/季节覆盖
-      ctx.drawImage(_pimg, 0, 0, WW, WH);
-      drawRiverLife(ctx, S);
-      if (!night) { const tint = ['rgba(255,120,175,.12)', null, 'rgba(235,150,50,.17)', 'rgba(208,232,255,.32)'][season]; if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, WW, WH); } if (season === 3) { ctx.fillStyle = 'rgba(255,255,255,.55)'; for (let i = 0; i < 50; i++) { const x = (i * 231) % WW, y = WH * 0.5 + (i * 97) % (WH * 0.46); ctx.beginPath(); ctx.ellipse(x, y, 26, 10, 0, 0, 7); ctx.fill(); } } }
-      else { ctx.fillStyle = 'rgba(16,24,52,.46)'; ctx.fillRect(0, 0, WW, WH); ctx.fillStyle = '#fdf6c0'; ctx.beginPath(); ctx.arc(WW * 0.82, WH * 0.12, WH * 0.045, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(16,24,52,1)'; ctx.beginPath(); ctx.arc(WW * 0.835, WH * 0.106, WH * 0.04, 0, 7); ctx.fill(); ctx.fillStyle = '#fff'; for (let i = 0; i < 40; i++) { const x = (i * 167.3) % WW, y = (i * 51.7) % (WH * 0.36); ctx.globalAlpha = 0.4 + 0.5 * Math.abs(Math.sin(G.t * 1.5 + i)); ctx.fillRect(x, y, 2.4, 2.4); } ctx.globalAlpha = 1; }
-      return;
-    }
+    const night = G.save.night, season = (G.save.season | 0) % 4;
+    // 俯视大花园：整片草地 + 多个湖泊水域 + 装饰
+    const GR = SEASON_GRASS[season], gg = ctx.createLinearGradient(0, 0, 0, WH);
+    if (night) { gg.addColorStop(0, '#3f6b47'); gg.addColorStop(1, '#2b4d33'); } else { gg.addColorStop(0, GR[0]); gg.addColorStop(1, GR[1]); }
+    ctx.fillStyle = gg; ctx.fillRect(0, 0, WW, WH);
+    ctx.fillStyle = night ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.06)';
+    for (let i = 0; i < 150; i++) { const x = (i * 337.7) % WW, y = (i * 521.3) % WH; ctx.beginPath(); ctx.ellipse(x, y, 70, 34, 0, 0, 7); ctx.fill(); }
+    ((S.water && S.water.lakes) || []).forEach(l => drawLake(ctx, l, night, G.t));
+    drawRiverLife(ctx, S);
+    (S.ambient || []).forEach(a => { if (a.kind === 'flower') flower(ctx, a.x, a.y, a.r, a.c); else if (a.kind === 'grass') grassTuft(ctx, a.x, a.y, a.h); else { ctx.fillStyle = '#9aa7b5'; ctx.beginPath(); ctx.ellipse(a.x, a.y, a.r, a.r * 0.7, 0, 0, 7); ctx.fill(); } });
+    if (!night) { if (season === 3) { ctx.fillStyle = 'rgba(255,255,255,.5)'; for (let i = 0; i < 130; i++) { const x = (i * 231) % WW, y = (i * 97) % WH; ctx.beginPath(); ctx.ellipse(x, y, 30, 12, 0, 0, 7); ctx.fill(); } } else { const tint = ['rgba(255,120,175,.08)', null, 'rgba(235,150,50,.12)', null][season]; if (tint) { ctx.fillStyle = tint; ctx.fillRect(0, 0, WW, WH); } } }
+    else { ctx.fillStyle = 'rgba(16,24,52,.42)'; ctx.fillRect(0, 0, WW, WH); ctx.fillStyle = '#fdf6c0'; ctx.beginPath(); ctx.arc(WW * 0.9, WH * 0.09, WH * 0.03, 0, 7); ctx.fill(); }
+    return;
+    // eslint-disable-next-line
     const sky = ctx.createLinearGradient(0, 0, 0, WH * 0.44);
     if (night) { sky.addColorStop(0, '#16223f'); sky.addColorStop(1, '#33456a'); }
     else { sky.addColorStop(0, SEASON_SKY[season][0]); sky.addColorStop(1, SEASON_SKY[season][1]); }
@@ -342,7 +360,7 @@
     function s2w(x, y) { return { x: (x - S.cam.x) / S.cam.s, y: (y - S.cam.y) / S.cam.s }; }
     function zoomAt(sx, sy, f) { const w = s2w(sx, sy); S.cam.s = Math.max(sMin(), Math.min(sMin() * 3.4, S.cam.s * f)); S.cam.x = sx - w.x * S.cam.s; S.cam.y = sy - w.y * S.cam.s; clampCam(); }
     function homePos() { const base = listArr().find(p => p.base); return base ? { x: base.x, y: base.y } : { x: WW / 2, y: WH * 0.6 }; }
-    function centerCam() { S.cam.s = sMin() * (opts.rooms ? 1.4 : 1.7); const h = opts.rooms ? { x: WW / 2, y: WH * 0.56 } : homePos(); S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
+    function centerCam() { S.cam.s = opts.rooms ? sMin() * 1.4 : sMin(); const h = opts.rooms ? { x: WW / 2, y: WH * 0.56 } : { x: WW / 2, y: WH / 2 }; S.cam.x = G.W / 2 - h.x * S.cam.s; S.cam.y = (vTop() + vBot()) / 2 - h.y * S.cam.s; clampCam(); }
 
     function ensureBase() { if (!opts.base || listArr().some(p => p.base)) return; listArr().unshift({ id: G.save.placeSeq++, item: 'tent', base: true, homeId: '1', x: WW / 2, y: WH * 0.6 }); Eng.persist(); }
     function migrate() {
@@ -364,20 +382,29 @@
       listArr().forEach(p => { if (p === self || !DATA.ITEMS[p.item].surface) return; const w = dispS(p.item) * 0.5, ty = surfaceTopY(p); if (Math.abs(wx - p.x) < w && wy > ty - dispS(p.item) * 0.4 && wy < p.y + dispS(p.item) * 0.2) { if (!best || p.y > best.y) best = p; } });
       return best;
     }
-    function clampWorld(p) { p.x = Math.max(40, Math.min(WW - 40, p.x)); p.y = Math.max(WH * (opts.rooms ? 0.5 : 0.42), Math.min(WH - 40, p.y)); }
+    function clampWorld(p) { p.x = Math.max(40, Math.min(WW - 40, p.x)); p.y = Math.max(WH * (opts.rooms ? 0.5 : 0.05), Math.min(WH * (opts.rooms ? 1 : 0.97) - 40, p.y)); }
+    function inWater(x, y) { if (!S.water) return false; return S.water.lakes.some(l => { const a = (x - l.cx) / l.rx, b = (y - l.cy) / l.ry; return a * a + b * b <= 1; }); }
     function trashZone() { const r = Math.max(44, G.H * 0.07); return { x: G.W / 2 - r * 1.6, y: groundTop() + 6, w: r * 3.2, h: r, r }; }
     function trayLayout() { const ids = trayItems(); const tT = trayTop(), h = G.H * 0.18 - 8, iw = h * 0.92, gap = 10, pad = 12; S.trayMax = Math.max(0, pad * 2 + ids.length * (iw + gap) - G.W); return ids.map((id, i) => ({ id, x: pad + i * (iw + gap) + S.trayScroll, y: tT + 4, w: iw, h: h - 8 })); }
 
     function adaSize() { return opts.ada === 'tent' ? 210 : 150; }
     function adaHome() { if (opts.ada === 'park') { const base = listArr().find(p => p.base); return base ? { x: base.x - dsp(base) * 0.62, y: base.y + dsp(base) * 0.12 } : { x: WW * 0.4, y: WH * 0.6 }; } return { x: WW * 0.5, y: WH * 0.74 }; }
     function initAda() { if (!opts.ada) return; const sv = G.save.adaPos[opts.ada], h = adaHome(), ix = sv ? sv.x : h.x, iy = sv ? sv.y : h.y; S.ada = { x: ix, y: iy, tx: ix, ty: iy, face: 1, wt: 2, moving: false }; }
-    function genAmbient() { S.ambient = []; if (opts.rooms) return; const cols = ['#ff6b9d', '#feca57', '#ff9ff3', '#ffffff', '#ff7979']; for (let i = 0; i < 70; i++) { const x = 30 + Math.random() * (WW - 60), y = WH * 0.46 + Math.random() * (WH * 0.5), t = Math.random(); if (t < 0.5) S.ambient.push({ kind: 'grass', x, y, h: 16 + Math.random() * 16 }); else if (t < 0.85) S.ambient.push({ kind: 'flower', x, y, r: 7 + Math.random() * 5, c: cols[(Math.random() * cols.length) | 0] }); else S.ambient.push({ kind: 'rock', x, y, r: 9 + Math.random() * 10 }); } }
-    function initRiver() { S.river = []; const fc = [['#ff9ff3', '#e26fd0'], '#f368e0'], gc = [['#7ee0a8', '#3bb878'], '#2fa869'], oc = [['#ffd56b', '#f0a93a'], '#e8902a']; const fish = [fc, gc, oc]; for (let i = 0; i < 3; i++) S.river.push({ kind: 'duck', x: Math.random() * WW, vx: 22 + Math.random() * 18, ph: Math.random() * 6, y: WH * 0.635 + Math.random() * WH * 0.03 }); for (let i = 0; i < 4; i++) { const c = fish[i % 3]; S.river.push({ kind: 'fish', x: Math.random() * WW, vx: (Math.random() < .5 ? 1 : -1) * (18 + Math.random() * 20), ph: Math.random() * 6, y: WH * 0.66 + Math.random() * WH * 0.05, col: c[0], fin: c[1] }); } }
+    function genAmbient() { S.ambient = []; if (opts.rooms) return; const cols = ['#ff6b9d', '#feca57', '#ff9ff3', '#ffffff', '#ff7979']; for (let i = 0; i < 220; i++) { const x = 30 + Math.random() * (WW - 60), y = WH * 0.04 + Math.random() * (WH * 0.92), t = Math.random(); if (inWater(x, y)) continue; if (t < 0.5) S.ambient.push({ kind: 'grass', x, y, h: 16 + Math.random() * 18 }); else if (t < 0.85) S.ambient.push({ kind: 'flower', x, y, r: 7 + Math.random() * 6, c: cols[(Math.random() * cols.length) | 0] }); else S.ambient.push({ kind: 'rock', x, y, r: 9 + Math.random() * 11 }); } }
+    function initRiver() {
+      const spec = [[0.2, 0.28, 0.13, 0.09], [0.68, 0.24, 0.15, 0.1], [0.44, 0.6, 0.19, 0.12], [0.83, 0.68, 0.13, 0.09], [0.16, 0.74, 0.12, 0.08], [0.62, 0.84, 0.14, 0.08]];
+      S.water = { lakes: spec.map(l => ({ cx: WW * l[0], cy: WH * l[1], rx: WW * l[2], ry: WH * l[3] })) };
+      S.river = []; const fc = [['#ff9ff3', '#e26fd0'], '#f368e0'], gc = [['#7ee0a8', '#3bb878'], '#2fa869'], oc = [['#ffd56b', '#f0a93a'], '#e8902a']; const fish = [fc, gc, oc];
+      S.water.lakes.forEach((lk, i) => {
+        for (let d = 0; d < 1 + (i % 2); d++) S.river.push({ kind: 'duck', lake: lk, x: lk.cx + (Math.random() - .5) * lk.rx, y: lk.cy + (Math.random() - .5) * lk.ry * 0.6, vx: 16 + Math.random() * 12, ph: Math.random() * 6 });
+        for (let f = 0; f < 2; f++) { const c = fish[(i + f) % 3]; S.river.push({ kind: 'fish', lake: lk, x: lk.cx + (Math.random() - .5) * lk.rx, y: lk.cy + (Math.random() - .5) * lk.ry * 0.6, vx: (Math.random() < .5 ? 1 : -1) * (12 + Math.random() * 14), ph: Math.random() * 6, col: c[0], fin: c[1] }); }
+      });
+    }
 
     S.enter = function (arg) {
       if (opts.rooms) { S.homeId = (arg && arg.homeId) || S.homeId || '1'; if (!G.save.homes[S.homeId]) G.save.homes[S.homeId] = { style: 0, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; S.room = (arg && arg.room) || 'living'; }
       S.drag = null; S.pan = null; S.trayScroll = 0; S.trayMax = 0; S._active = null; S.trayDrag = null; S.rotTarget = null; S._pinchInit = false; S.wparts = []; S.fw = []; S.fwT = 1.5;
-      migrate(); ensureBase(); genAmbient(); if (opts.river) initRiver(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice);
+      migrate(); ensureBase(); if (opts.river) initRiver(); genAmbient(); initAda(); centerCam(); recomputePop(true); Audio2.voice(opts.voice);
     };
     S.setRoom = function (rm) { if (S.room === rm) return; S.room = rm; S.drag = null; S.pan = null; S.rotTarget = null; centerCam(); Audio2.sfx('click'); };
     S.resize = function () { clampCam(); };
@@ -391,7 +418,7 @@
     S.onPinchEnd = function () { S._pinchInit = false; if (S.rotTarget) { Eng.persist(); S.rotTarget = null; } };
     S.update = function (dt) {
       if (opts.ada && S.ada) S.ada.moving = false;            // 公主停在原地，不再自由走动
-      if (opts.river && S.river) S.river.forEach(d => { d.x += d.vx * dt; d.ph += dt; if (d.x > WW + 60) d.x = -60; if (d.x < -60) d.x = WW + 60; });
+      if (opts.river && S.river) S.river.forEach(d => { d.ph += dt; if (d.lake) { d.x += d.vx * dt; const nx = (d.x - d.lake.cx) / d.lake.rx; if (Math.abs(nx) > 0.82) { d.vx = -d.vx; d.x = d.lake.cx + Math.sign(nx) * 0.82 * d.lake.rx; } } });
       if (opts.weather) {                                     // 季节飘落：春花瓣 / 秋落叶 / 冬雪
         const sp = ['petal', 'none', 'leaf', 'snow'][(G.save.season | 0) % 4];
         if (sp !== 'none') {
@@ -418,7 +445,7 @@
         const w = s2w(x, y);
         if (opts.ada && S.ada) { const sz = adaSize(); if (Math.abs(w.x - S.ada.x) < sz * 0.34 && w.y > S.ada.y - sz * 0.55 && w.y < S.ada.y + sz * 0.5) { S.drag = { kind: 'ada', dx: w.x - S.ada.x, dy: w.y - S.ada.y, scrX: x, scrY: y }; Audio2.sfx('pop'); return; } }
         const p = pickPlaced(w.x, w.y);
-        if (p) { S.drag = { kind: 'placed', p, item: p.item, dx: w.x - p.x, dy: w.y - p.y, scrX: x, scrY: y, sx: x, sy: y }; Audio2.sfx('pop'); return; }
+        if (p) { S.drag = { kind: 'placed', p, item: p.item, dx: w.x - p.x, dy: w.y - p.y, scrX: x, scrY: y, sx: x, sy: y, ox: p.x, oy: p.y }; Audio2.sfx('pop'); return; }
         S.pan = { x, y, camx: S.cam.x, camy: S.cam.y }; return;
       }
       if (y >= trayTop()) {                                // 托盘：先记下(可能是横滑滚动，也可能向上拖取物)
@@ -458,6 +485,7 @@
       if (dr.kind === 'tray') {
         if (inWorld) {
           const it = DATA.ITEMS[dr.item];
+          if (opts.river && inWater(w.x, w.y) && !it.water) { Audio2.sfx('bad'); Eng.floatText(x, y - 20, '这个不能放水里哦~', '#ff7675'); return; }
           const entry = { id: G.save.placeSeq++, item: dr.item, x: w.x, y: w.y, rot: 0 }; clampWorld(entry);
           if (it.home) { entry.homeId = String(G.save.homeSeq++); G.save.homes[entry.homeId] = { style: (G.save.homeSeq) % HOME_STYLES.length, rooms: { living: [], bedroom: [], kitchen: [], bathroom: [] } }; Eng.floatText(w.x * S.cam.s + S.cam.x, w.y * S.cam.s + S.cam.y - 30, '新帐篷! 点进去布置🏠', '#e67e22'); }
           if (it.onTop) { const surf = surfaceAt(w.x, w.y, null); if (surf) { entry.onId = surf.id; entry.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, w.x - surf.x)); } }
@@ -469,7 +497,10 @@
         if (isHome(p) && moved < 14) { Audio2.sfx('place'); Eng.go('tent', { homeId: p.homeId || '1', room: 'living' }); return; }   // 轻点帐篷=进去
         if (p.base && (onTrash || onTray)) { Audio2.sfx('bad'); Eng.floatText(G.W / 2, vTop() + 60, '🏕️ 这是 Ada 的家，拆不掉哦~', '#e67e22'); Eng.persist(); }
         else if (onTrash || onTray) { childrenOf(p.id).forEach(c => { c.onId = null; }); if (isHome(p) && p.homeId) delete G.save.homes[p.homeId]; G.save.built[p.item] = (G.save.built[p.item] || 0) + 1; listArr().splice(listArr().indexOf(p), 1); Audio2.sfx('pop'); Eng.floatText(x, y - 20, '收回了 ' + DATA.ITEMS[p.item].name, '#ff7675'); recomputePop(false); }
-        else if (inWorld) { p.onId = null; delete p.offx; if (DATA.ITEMS[p.item].onTop) { const surf = surfaceAt(w.x, w.y, p); if (surf) { p.onId = surf.id; p.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, w.x - surf.x)); Audio2.sfx('good'); } } Audio2.sfx('place'); Eng.persist(); recomputePop(true); }
+        else if (inWorld) {
+          if (opts.river && inWater(p.x, p.y) && !DATA.ITEMS[p.item].water) { p.x = dr.ox; p.y = dr.oy; clampWorld(p); Audio2.sfx('bad'); Eng.floatText(x, y - 20, '这个不能放水里哦~', '#ff7675'); return; }
+          p.onId = null; delete p.offx; if (DATA.ITEMS[p.item].onTop) { const surf = surfaceAt(w.x, w.y, p); if (surf) { p.onId = surf.id; p.offx = Math.max(-dispS(surf.item) * 0.28, Math.min(dispS(surf.item) * 0.28, w.x - surf.x)); Audio2.sfx('good'); } } Audio2.sfx('place'); Eng.persist(); recomputePop(true);
+        }
       }
     };
 
@@ -544,7 +575,7 @@
 
   /* —— 乐园 —— */
   const park = makePlacement({
-    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 2600, worldH: 1500, river: true, weather: true, fireworks: true,
+    listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 5200, worldH: 3000, river: true, weather: true, fireworks: true,
     hint: '拖空地平移 · 双指/滚轮缩放 · 双指转物品 · 拖到🗑删除 · 点帐篷进去',
     afterDraw: (ctx, S) => {
       const vt = Math.max(46, G.H * 0.075) + 10 + G.H * 0.08, vb = G.H - G.H * 0.18;
