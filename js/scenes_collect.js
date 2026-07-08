@@ -4,6 +4,9 @@
 (function () {
   const Eng = window.Game, G = Eng.G;
   const rr = Eng.roundRect, btn = Eng.drawButton, hit = Eng.inBtn;
+  // 分类桶 AI 立体图懒加载（放 assets/sprites/bin_<id>.png 自动启用）
+  const BIN_IMG = {}, _binTried = {};
+  function binImg(id) { if (_binTried[id]) return BIN_IMG[id] || null; _binTried[id] = true; if (typeof Image === 'undefined') return null; const im = new Image(); im.onload = () => BIN_IMG[id] = im; im.onerror = () => {}; im.src = 'assets/sprites/bin_' + id + '.png'; return null; }
 
   function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
   function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
@@ -271,7 +274,7 @@
   ocean._move = function (x, y) { if (ocean.drag) { ocean.drag.it.x = x - ocean.drag.dx; ocean.drag.it.y = y - ocean.drag.dy; ocean.drag.it.va = 0; ocean.drag.it.ang *= 0.8; } };
   ocean._up = function (x, y) {
     const d = ocean.drag; ocean.drag = null; if (!d) return;
-    const r = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - 24);
+    const r = binRects().find(r => x >= r.x && x <= r.x + r.w && y >= r.y - r.h * 1.1);
     if (!r) { d.it.vx = (Math.random() - .5) * 20; d.it.vy = ocean.water ? -10 : -120; return; }   // 没投进：水里继续漂 / 陆地抛回落地
     const t = DATA.TRASH[d.it.id];
     if (t.bin === r.bin.id) {
@@ -422,8 +425,21 @@
     // 涟漪
     ocean.ripples.forEach(rp => { const k = rp.age / rp.max; ctx.save(); ctx.globalAlpha = (1 - k) * 0.8; ctx.lineWidth = 4 * (1 - k) + 1; ctx.strokeStyle = lighten(rp.col, 40); ctx.beginPath(); ctx.ellipse(rp.x, rp.y, 10 + k * 60, (10 + k * 60) * 0.4, 0, 0, 7); ctx.stroke(); ctx.restore(); });
 
-    // 分类箱（台形桶身 + 翻盖 + 横排：左大图标｜右名字+提示）
+    // 分类箱（AI 立体桶图；无图时程序化台形桶兜底）
     binRects().forEach(r => {
+      const _bimg = binImg(r.bin.id);
+      if (_bimg) {
+        const jump = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
+        const bw = r.w * 0.66, bh = bw * _bimg.height / _bimg.width;
+        const bx = r.x + r.w / 2, by = r.y + r.h * 0.99, sc = 1 + jump * 0.09;
+        Eng.softShadow(ctx, bx, by - 4, bw * 0.42, bh * 0.05, 0.3);
+        ctx.save(); ctx.translate(bx, by - jump * 12); ctx.scale(sc, sc); ctx.drawImage(_bimg, -bw / 2, -bh, bw, bh); ctx.restore();
+        ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic'; ctx.lineJoin = 'round';
+        ctx.font = 'bold ' + Math.round(r.w * 0.135) + 'px "PingFang SC",sans-serif';
+        ctx.lineWidth = 4.5; ctx.strokeStyle = 'rgba(0,0,0,.34)'; ctx.strokeText(r.bin.name, bx, by - bh - r.h * 0.05);
+        ctx.fillStyle = '#fff'; ctx.fillText(r.bin.name, bx, by - bh - r.h * 0.05);
+        return;
+      }
       const c = r.bin.color, open = ocean.binAnim[r.bin.id] ? Math.sin((1 - ocean.binAnim[r.bin.id] / 0.5) * Math.PI) : 0;
       const bx = r.x, bw = r.w, by = r.y, bh = r.h;
       const lidH = bh * 0.19, bodyTop = by + lidH * 0.72, bodyH = by + bh - bodyTop, inset = bw * 0.055, rC = 13;
