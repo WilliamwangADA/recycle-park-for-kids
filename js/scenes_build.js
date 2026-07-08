@@ -495,6 +495,7 @@
       } else if (dr.kind === 'placed') {
         const p = dr.p, moved = Math.hypot(x - dr.sx, y - dr.sy);
         if (isHome(p) && moved < 14) { Audio2.sfx('place'); Eng.go('tent', { homeId: p.homeId || '1', room: 'living' }); return; }   // 轻点帐篷=进去
+        if (!isHome(p) && moved < 12 && !onTrash && !onTray) { p.flip = -(p.flip || 1); Audio2.sfx('click'); Eng.floatText(x, y - 24, '↔ 换个方向', '#3aa0e0'); Eng.persist(); return; }   // 轻点物品=左右翻转朝向
         if (p.base && (onTrash || onTray)) { Audio2.sfx('bad'); Eng.floatText(G.W / 2, vTop() + 60, '🏕️ 这是 Ada 的家，拆不掉哦~', '#e67e22'); Eng.persist(); }
         else if (onTrash || onTray) { childrenOf(p.id).forEach(c => { c.onId = null; }); if (isHome(p) && p.homeId) delete G.save.homes[p.homeId]; G.save.built[p.item] = (G.save.built[p.item] || 0) + 1; listArr().splice(listArr().indexOf(p), 1); Audio2.sfx('pop'); Eng.floatText(x, y - 20, '收回了 ' + DATA.ITEMS[p.item].name, '#ff7675'); recomputePop(false); }
         else if (inWorld) {
@@ -534,7 +535,7 @@
         if (home) { ctx.fillStyle = 'rgba(120,90,50,.18)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.62, ds * 0.22, 0, 0, 7); ctx.fill(); ctx.fillStyle = 'rgba(214,189,140,.5)'; ctx.beginPath(); ctx.ellipse(p.x, p.y + ds * 0.42, ds * 0.5, ds * 0.17, 0, 0, 7); ctx.fill(); }
         if (!p.onId) Eng.softShadow(ctx, p.x, p.y + ds * 0.42, ds * 0.34, ds * 0.13, dragging ? .26 : .18);
         ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.28)'; ctx.shadowBlur = ds * 0.05; ctx.shadowOffsetY = ds * 0.04;
-        Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1), { rot: p.rot || 0 });
+        Sprites.draw(ctx, DATA.ITEMS[p.item].sprite, p.x, p.y - (dragging ? ds * 0.08 : 0), ds * (dragging ? 1.08 : 1), { rot: p.rot || 0, flip: p.flip || 1 });
         ctx.restore();
         if (home) { ctx.fillStyle = '#ffffff'; ctx.strokeStyle = '#e67e22'; ctx.lineWidth = 2; const lw = ds * 0.66, lh = ds * 0.16, lx = p.x - lw / 2, ly = p.y + ds * 0.5; rr(ctx, lx, ly, lw, lh, lh * 0.4); ctx.fill(); ctx.stroke(); ctx.fillStyle = '#e67e22'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.font = 'bold ' + Math.round(lh * 0.6) + 'px "PingFang SC",sans-serif'; ctx.fillText('🚪 点我进去', p.x, ly + lh / 2); }
       });
@@ -576,7 +577,7 @@
   /* —— 乐园 —— */
   const park = makePlacement({
     listKey: 'placed', voice: 'park_intro', base: true, showVisitors: true, ada: 'park', bg: parkWorldBg, worldW: 5200, worldH: 3000, river: true, weather: true, fireworks: true,
-    hint: '拖空地平移 · 双指/滚轮缩放 · 双指转物品 · 拖到🗑删除 · 点帐篷进去',
+    hint: '拖空地平移 · 双指缩放 · 轻点物品换方向 · 双指转 · 拖到🗑删除 · 点帐篷进去',
     afterDraw: (ctx, S) => {
       const vt = Math.max(46, G.H * 0.075) + 10 + G.H * 0.08, vb = G.H - G.H * 0.18;
       ctx.save(); ctx.beginPath(); ctx.rect(0, vt, G.W, vb - vt); ctx.clip();
@@ -608,7 +609,7 @@
   const tent = makePlacement({
     voice: 'tent_intro', ada: 'tent', bg: tentRoomBg, worldW: 2000, worldH: 1300, rooms: true,
     listArr: (S) => { const h = G.save.homes[S.homeId] || G.save.homes['1']; if (!h.rooms[S.room]) h.rooms[S.room] = []; return h.rooms[S.room]; },
-    hint: '拖空地平移 · 双指缩放/转物品 · 上面切换房间 · 拖东西进来布置 · 拖到🗑收回',
+    hint: '拖空地平移 · 双指缩放 · 轻点物品换方向 · 上面切换房间 · 拖东西进来 · 拖到🗑收回',
     back: () => Eng.go('park'),
     nav: (S, ctx, bw, bh) => {
       const ob = { x: G.W - bw * 2 - 22, y: 12, w: bw, h: bh, label: '🌳 出帐篷', color: '#27ae60', fs: Math.round(bh * 0.3), onTap: () => Eng.go('park') };

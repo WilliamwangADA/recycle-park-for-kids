@@ -163,6 +163,23 @@ window.DATA = (function () {
     // —— 可插进花瓶的花 ——
     bouquet:    { name: '花束',   sprite: 'i_bouquet',    cost: { paper: 2 },               charm: 5, scale: 0.6,  onTop: true },
     tulip:      { name: '郁金香', sprite: 'i_tulip',      cost: { paper: 1 },               charm: 3, scale: 0.45, onTop: true },
+    // —— 更多户外物品 ——
+    fence:      { name: '栅栏',   sprite: 'i_fence',      cost: { wood: 2 },                charm: 2, scale: 1.0 },
+    birdhouse:  { name: '鸟屋',   sprite: 'i_birdhouse',  cost: { wood: 2 },                charm: 4, scale: 0.75 },
+    hammock:    { name: '吊床',   sprite: 'i_hammock',    cost: { rubber: 1, wood: 1 },     charm: 5, scale: 1.1 },
+    trampoline: { name: '蹦床',   sprite: 'i_trampoline', cost: { rubber: 2, metal: 1 },    charm: 6, scale: 1.3 },
+    mushroom:   { name: '蘑菇屋', sprite: 'i_mushroom',   cost: { wood: 2 },                charm: 4, scale: 1.0 },
+    scarecrow:  { name: '稻草人', sprite: 'i_scarecrow',  cost: { wood: 1, paper: 1 },      charm: 3, scale: 1.0 },
+    doghouse:   { name: '狗屋',   sprite: 'i_doghouse',   cost: { wood: 2 },                charm: 4, scale: 0.85 },
+    // —— 更多室内家具 ——
+    bookshelf:  { name: '书架',   sprite: 'i_bookshelf',  cost: { wood: 3 },                charm: 5, scale: 1.2,  room: 'living' },
+    rug:        { name: '地毯',   sprite: 'i_rug',        cost: { paper: 2 },               charm: 3, scale: 1.2,  room: 'living' },
+    computer:   { name: '电脑',   sprite: 'i_computer',   cost: { plastic: 2, metal: 1 },   charm: 5, scale: 0.7,  room: 'living', onTop: true },
+    fireplace:  { name: '壁炉',   sprite: 'i_fireplace',  cost: { metal: 2 },               charm: 6, scale: 1.1,  room: 'living' },
+    aquarium:   { name: '鱼缸',   sprite: 'i_aquarium',   cost: { glass: 2 },               charm: 6, scale: 0.9,  room: 'living', onTop: true },
+    desklamp:   { name: '台灯',   sprite: 'i_desklamp',   cost: { metal: 1 },               charm: 3, scale: 0.5,  room: 'bedroom', onTop: true },
+    wardrobe:   { name: '衣柜',   sprite: 'i_wardrobe',   cost: { wood: 3 },                charm: 5, scale: 1.4,  room: 'bedroom' },
+    crib:       { name: '婴儿床', sprite: 'i_crib',       cost: { wood: 3 },                charm: 5, scale: 1.3,  room: 'bedroom' },
   };
 
   /* ---- 关卡（v0.1 只解锁大海；每关一套垃圾池）---- */

@@ -185,6 +185,7 @@ window.Sprites = (function () {
     ctx.save();
     if (opts.alpha != null) ctx.globalAlpha = opts.alpha;
     if (opts.rot) { ctx.translate(cx, cy); ctx.rotate(opts.rot); ctx.translate(-cx, -cy); }
+    if (opts.flip === -1) { ctx.translate(cx, cy); ctx.scale(-1, 1); ctx.translate(-cx, -cy); }
     if (im) { ctx.drawImage(im, cx - size / 2, cy - size / 2, size, size); ctx.restore(); return; }
     ctx.translate(cx - size / 2, cy - size / 2); ctx.scale(size / 100, size / 100);
     const fn = F[key];
